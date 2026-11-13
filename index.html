@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>军队文职备考工作台</title>
+<style>
+:root{
+  --bg:#F2F4EF; --surface:#FFFFFF; --ink:#1D271F; --muted:#66705F; --line:#D6DBCF;
+  --olive:#4A5E36; --olive-soft:#E3E9DA; --red:#BF3A2C; --red-soft:#F7E3DF; --amber:#9A6B12;
+  --shadow:0 1px 0 rgba(29,39,31,.06);
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#131712; --surface:#1B2019; --ink:#E5E9E0; --muted:#9AA391; --line:#2F372C;
+    --olive:#A3B886; --olive-soft:#26301F; --red:#E66A5B; --red-soft:#3A201C; --amber:#D9A748;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#131712; --surface:#1B2019; --ink:#E5E9E0; --muted:#9AA391; --line:#2F372C;
+  --olive:#A3B886; --olive-soft:#26301F; --red:#E66A5B; --red-soft:#3A201C; --amber:#D9A748;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 64px)}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+h1,h2,h3{font-family:"Noto Serif SC","Songti SC","STSong",serif;font-weight:800;line-height:1.3;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--olive);outline-offset:2px}
+img{max-width:100%}
+
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.top-inner{max-width:880px;margin:0 auto;padding:14px 18px 0}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.brand h1{font-size:20px}
+.count{font-size:14px;color:var(--muted);white-space:nowrap}
+.count b{font-family:"Noto Serif SC",serif;font-size:22px;color:var(--red);font-weight:800;margin:0 2px}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;margin-top:10px;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs a{flex:none;padding:8px 12px;border-radius:8px 8px 0 0;color:var(--muted);text-decoration:none;font-size:15px;border-bottom:3px solid transparent}
+nav.tabs a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--olive);font-weight:600}
+
+main{max-width:880px;margin:0 auto;padding:20px 18px 80px}
+.banner{background:var(--red-soft);color:var(--ink);border-left:4px solid var(--red);padding:10px 14px;border-radius:6px;margin-bottom:16px;font-size:14px}
+.hint{color:var(--muted);font-size:14px}
+.section{margin-bottom:28px}
+.section > h2{font-size:18px;margin-bottom:10px}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;box-shadow:var(--shadow)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:8px;font-size:15px}
+.btn.primary{background:var(--olive);border-color:var(--olive);color:var(--bg);font-weight:600}
+.btn.red{color:var(--red);border-color:var(--red)}
+.btn.small{padding:4px 10px;font-size:14px}
+.btn:disabled{opacity:.5;cursor:default}
+select,input[type=text],input[type=date],textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:15px;max-width:100%}
+textarea{width:100%;min-height:70px;resize:vertical}
+label.chk{display:inline-flex;gap:6px;align-items:center;font-size:15px}
+
+/* Overview */
+.stats{display:flex;flex-wrap:wrap;gap:22px;margin:4px 0 6px}
+.stat{min-width:90px}
+.stat .n{font-family:"Noto Serif SC",serif;font-size:30px;font-weight:800;line-height:1.1}
+.stat .l{font-size:13px;color:var(--muted)}
+.stat.red .n{color:var(--red)}
+
+/* Progress */
+.mod{border-top:1px solid var(--line);padding:14px 0}
+.mod:first-child{border-top:0;padding-top:0}
+.mod-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.mod-head h3{font-size:17px;min-width:6em}
+.bar{flex:1;min-width:120px;height:8px;background:var(--olive-soft);border-radius:4px;overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.bar .m{background:var(--olive)}
+.bar .s{background:color-mix(in srgb,var(--olive) 45%,transparent)}
+.pct{font-size:14px;color:var(--muted);min-width:9em;text-align:right}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:14px;display:inline-flex;gap:6px;align-items:center}
+.chip .dot{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--muted)}
+.chip[data-s="1"]{background:var(--olive-soft)}
+.chip[data-s="1"] .dot{border-color:var(--olive);background:linear-gradient(90deg,var(--olive) 50%,transparent 50%)}
+.chip[data-s="2"]{background:var(--olive);color:var(--bg);border-color:var(--olive)}
+.chip[data-s="2"] .dot{border-color:var(--bg);background:var(--bg)}
+.chip .err{color:var(--red);font-size:12px;font-weight:600}
+.chip[data-s="2"] .err{color:var(--bg)}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--muted);margin-bottom:10px;flex-wrap:wrap}
+
+/* Capture */
+.drop{border:2px dashed var(--line);border-radius:10px;padding:22px;text-align:center;background:var(--surface)}
+.drop.has{border-color:var(--olive)}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+.thumbs img{width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
+.log{font-size:14px;color:var(--muted);margin-top:10px;white-space:pre-wrap}
+
+/* Mistake card: red pen margin */
+.card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--red);border-radius:8px;padding:14px 16px;margin-bottom:12px}
+.card.done{border-left-color:var(--olive)}
+.card-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;color:var(--muted);margin-bottom:6px}
+.tag{background:var(--olive-soft);color:var(--ink);padding:1px 8px;border-radius:4px;font-size:13px}
+.tag.red{background:var(--red-soft);color:var(--red)}
+.q{white-space:pre-wrap}
+.opts{margin:6px 0 0;padding:0;list-style:none}
+.opts li{padding:2px 0}
+.ans{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:15px}
+.ans p{margin:4px 0}
+.ans b{color:var(--olive)}
+.sim{margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:6px}
+.sim h4{margin:0 0 6px;font-size:14px;color:var(--muted);font-weight:600}
+details summary{cursor:pointer;color:var(--olive);font-size:14px;margin-top:6px}
+.card img.orig{max-height:340px;border-radius:6px;border:1px solid var(--line);margin-top:8px;display:block}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+
+/* Notes */
+.note{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:14px}
+.note h3{font-size:17px;margin-bottom:4px}
+.md h3{font-size:16px;margin:14px 0 6px}
+.md h4{font-size:15px;margin:10px 0 4px}
+.md ul,.md ol{padding-left:1.4em;margin:4px 0}
+.md p{margin:6px 0}
+
+/* Practice */
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px}
+.pprog{font-size:14px;color:var(--muted);margin-bottom:8px}
+
+.tdetail{margin-top:12px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.tdetail h4{margin:0 0 8px;font-size:16px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--surface);padding:5px 12px;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--olive);color:var(--bg);font-weight:600}
+.chip.on{outline:2px solid var(--olive);outline-offset:1px}
+.mini{font-size:14px;border-top:1px dashed var(--line);padding:8px 0}
+.drop.over{border-color:var(--olive);background:var(--olive-soft)}
+.thumb{position:relative}
+.thumb button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:var(--red);color:#fff;font-size:13px;line-height:22px;padding:0}
+.opt{display:block;width:100%;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 12px;margin-top:6px;font-size:15px;line-height:1.5}
+.opt:hover{border-color:var(--olive)}
+.opt.sel{border-color:var(--olive);background:var(--olive-soft)}
+.opt.right{border-color:var(--olive);background:var(--olive);color:var(--bg)}
+.opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+.opt:disabled{cursor:default}
+.verdict{margin-top:10px;font-weight:600}
+.verdict.ok{color:var(--olive)} .verdict.bad{color:var(--red)}
+.ptimer{float:right;font-variant-numeric:tabular-nums}
+.cfg textarea{min-height:200px;font-size:14px;line-height:1.6}
+.msg{margin:10px 0;padding:12px 14px;border-radius:10px;border:1px solid var(--line)}
+.msg.me{background:var(--olive-soft);margin-left:12%}
+.msg.ai{background:var(--surface)}
+.msg .who{font-size:13px;color:var(--muted);margin-bottom:2px}
+.msg img{max-height:220px;border-radius:6px;display:block;margin-top:6px}
+.ctx{font-size:14px;background:var(--bg);border:1px dashed var(--line);border-radius:8px;padding:8px 12px;margin-bottom:10px;white-space:pre-wrap;max-height:9em;overflow:auto}
+.drillq{border-top:1px solid var(--line);padding:12px 0}
+.empty{padding:28px 10px;text-align:center;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;z-index:20;max-width:90vw}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:30;padding:16px}
+.modal .box{background:var(--surface);border-radius:12px;padding:16px;max-width:720px;width:100%;max-height:85vh;display:flex;flex-direction:column;gap:10px}
+.modal textarea{flex:1;min-height:300px;font-size:13px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">
+      <h1 id="examTitle">备考工作台</h1>
+      <div class="count"><span id="syncDot" class="hint" style="margin-right:10px"></span><span id="countdown"></span></div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <a href="#home">进度</a>
+      <a href="#capture">收错题</a>
+      <a href="#bank">错题库</a>
+      <a href="#ask">答疑</a>
+      <a href="#notes">知识库</a>
+      <a href="#practice">练习</a>
+      <a href="#export">导出</a>
+      <a href="#settings">设置</a>
+    </nav>
+  </div>
+</header>
+<main id="view"><p class="hint">正在加载……</p></main>
+
+<script>
+(function(){
+"use strict";
+
+/* ========== 默认配置（换考试时，去“设置”页改，不用改代码） ========== */
+const DEFAULT_EXAM = "军队文职";
+const DEFAULT_ABOUT = "数学基础弱，资料分析、数量关系、图形推理是薄弱项；备考时间大约一个月。";
+const DEFAULT_MODULES = [
+  {id:"yanyu", name:"言语理解", topics:["逻辑填空（实词）","逻辑填空（成语）","片段阅读（主旨概括）","片段阅读（意图判断）","细节理解","语句排序","语句填空"]},
+  {id:"shuliang", name:"数量关系", topics:["代入排除","数字特性","比例与倍数","工程问题","行程问题","经济利润","排列组合与概率","几何问题","容斥问题","最值问题"]},
+  {id:"panduan", name:"判断推理", topics:["图推：位置规律","图推：样式规律","图推：数量规律","图推：属性规律","图推：空间重构","定义判断","类比推理","逻辑：翻译推理","逻辑：真假推理","逻辑：加强削弱"]},
+  {id:"ziliao", name:"资料分析", topics:["基期与现期","增长量","增长率","比重","平均数","倍数","间隔与混合增长","速算：截位直除","速算：特征数字"]},
+  {id:"changshi", name:"常识判断", topics:["政治理论","军事常识","法律常识","历史人文","科技地理"]},
+  {id:"xinwen", name:"新闻学专业", topics:["新闻学基本理论","新闻采访","新闻写作","新闻编辑与评论","传播学理论","新闻事业史","新闻法规与伦理","军事新闻宣传"]}
+];
+const API_URL = "https://api.deepseek.com/chat/completions";
+const MODEL = "deepseek-flash";
+const INTERVALS = [1,2,4,7,15];      // 复习间隔（天）
+const MASTER_STREAK = 2;             // 连续做对几次算掌握
+const DAY = 86400000;
+
+const S = {
+  ready:false, err:"",
+  progress:{status:{}, modules:[], examName:DEFAULT_EXAM, about:DEFAULT_ABOUT, examDate:"", daily:{}},
+  mistakes:[], notes:[], topics:{},
+  ans:{}, chats:[], showImg:new Set(),
+  askUi:{cur:"", input:"", img:null, busy:false, drillBusy:false},
+  capture:{files:[], busy:false, log:"", note:""},
+  bank:{mod:"all", range:"all", state:"open", q:"", open:new Set()},
+  notesUi:{busy:false, range:"today"},
+  practice:null,
+  exp:{mod:"all", range:"all", scope:"open", sim:true, timer:true},
+  topicOpen:"", topicBusy:new Set(), modBusy:"", simBusy:new Set(),
+  testMsg:""
+};
+
+/* ========== 工具 ========== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = n => String(n).padStart(2,"0");
+const dayKey = t => {const d=new Date(t);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());};
+const fmtDate = t => {const d=new Date(t);return (d.getMonth()+1)+"月"+d.getDate()+"日";};
+function startOfToday(){const d=new Date();d.setHours(0,0,0,0);return d.getTime();}
+function startOfDay(t){const d=new Date(t);d.setHours(0,0,0,0);return d.getTime();}
+function startOfWeek(){const d=new Date();d.setHours(0,0,0,0);const w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return d.getTime();}
+function inRange(t,r){ if(r==="today") return t>=startOfToday(); if(r==="week") return t>=startOfWeek(); return true; }
+const RANGE_TXT = {today:"今天", week:"本周", all:"全部"};
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function newId(p){return p+"_"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+let toastTimer=null;
+function toast(msg){let t=$(".toast");if(!t){t=document.createElement("div");t.className="toast";document.body.appendChild(t);}t.textContent=msg;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.remove(),3200);}
+const getKey=()=>{try{return localStorage.getItem("ds_key")||"";}catch(_){return "";}};
+
+const MISC={id:"misc",name:"未分类",topics:[]};
+const mods=()=>S.progress.modules;
+const modById=id=>mods().find(m=>m.id===id);
+const modName=id=>(modById(id)||MISC).name;
+const allTopics=mid=>{const m=modById(mid);return m?m.topics:[];};
+const topicKey=(mid,t)=>mid+"::"+t;
+const STATUS_TXT=["没学","学过","掌握"];
+const exam=()=>S.progress.examName||"考试";
+
+function md(src){
+  const lines=String(src||"").split(/\r?\n/);let html="",list=null;
+  const inline=s=>esc(s).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");
+  const close=()=>{if(list){html+="</"+list+">";list=null;}};
+  for(const raw of lines){
+    const l=raw.trimEnd();
+    if(/^#{1,2}\s/.test(l)){close();html+="<h3>"+inline(l.replace(/^#+\s/,""))+"</h3>";}
+    else if(/^#{3,}\s/.test(l)){close();html+="<h4>"+inline(l.replace(/^#+\s/,""))+"</h4>";}
+    else if(/^\s*[-*]\s+/.test(l)){if(list!=="ul"){close();html+="<ul>";list="ul";}html+="<li>"+inline(l.replace(/^\s*[-*]\s+/,""))+"</li>";}
+    else if(/^\s*\d+[.、]\s*/.test(l)){if(list!=="ol"){close();html+="<ol>";list="ol";}html+="<li>"+inline(l.replace(/^\s*\d+[.、]\s*/,""))+"</li>";}
+    else if(!l.trim()){close();}
+    else{close();html+="<p>"+inline(l)+"</p>";}
+  }
+  close();return html;
+}
+
+/* ========== 本地存储 ========== */
+const DB={
+  db:null,
+  open(){return new Promise((res,rej)=>{const r=indexedDB.open("beikao",1);
+    r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains("items"))d.createObjectStore("items",{keyPath:"id"});if(!d.objectStoreNames.contains("images"))d.createObjectStore("images");};
+    r.onsuccess=()=>{DB.db=r.result;res();};r.onerror=()=>rej(r.error);});},
+  req(store,mode,fn){return new Promise((res,rej)=>{const t=DB.db.transaction(store,mode);const q=fn(t.objectStore(store));t.oncomplete=()=>res(q?q.result:undefined);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error);});},
+  put(item){item.updatedAt=Date.now();Sync.soon();return DB.req("items","readwrite",s=>s.put(item));},
+  putRaw(item){return DB.req("items","readwrite",s=>s.put(item));},
+  del(id){Sync.soon();return DB.req("items","readwrite",s=>s.put({id,kind:"tomb",updatedAt:Date.now()}));},
+  all(){return DB.req("items","readonly",s=>s.getAll());},
+  putImg(id,blob){return DB.req("images","readwrite",s=>s.put(blob,id));},
+  getImg(id){return DB.req("images","readonly",s=>s.get(id));},
+  delImg(id){return DB.req("images","readwrite",s=>s.delete(id));},
+  clear(){return Promise.all([DB.req("items","readwrite",s=>s.clear()),DB.req("images","readwrite",s=>s.clear())]);}
+};
+function saveFail(e){console.error(e);toast("保存失败：浏览器存储可能已满，先去“设置”导出备份");}
+function saveProgress(){const b=JSON.parse(JSON.stringify(S.progress));b.id="progress";b.kind="progress";DB.put(b).catch(saveFail);}
+function saveMistake(x){DB.put(x).catch(saveFail);}
+
+const imgCache={};
+async function hydrateImages(){
+  for(const el of document.querySelectorAll("img[data-img]")){
+    const id=el.dataset.img;
+    if(!imgCache[id]){try{let b=await DB.getImg(id);if(!b&&Sync.on())b=await Sync.fetchImg(id);if(b)imgCache[id]=URL.createObjectURL(b);}catch(_){}}
+    if(imgCache[id])el.src=imgCache[id];else el.remove();
+  }
+}
+
+/* ========== 多设备同步（GitHub 私有仓库） ========== */
+const Sync={
+  timer:null,busy:false,again:false,status:"",
+  cfg(){try{return {repo:(localStorage.getItem("gh_repo")||"").trim(),token:(localStorage.getItem("gh_token")||"").trim()};}catch(_){return {repo:"",token:""};}},
+  on(){const c=Sync.cfg();return !!(c.repo&&c.token);},
+  soon(){if(!Sync.on())return;clearTimeout(Sync.timer);Sync.timer=setTimeout(()=>Sync.run(),6000);},
+  async api(path,opt){
+    const c=Sync.cfg();opt=opt||{};
+    const r=await fetch("https://api.github.com/repos/"+c.repo+"/contents/"+path,{method:opt.method||"GET",cache:"no-store",
+      headers:Object.assign({"Authorization":"Bearer "+c.token,"Accept":opt.raw?"application/vnd.github.raw+json":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"},opt.body?{"Content-Type":"application/json"}:{}),
+      body:opt.body?JSON.stringify(opt.body):undefined});
+    return r;
+  },
+  b64FromBytes(bytes){let s="";const ch=0x8000;for(let i=0;i<bytes.length;i+=ch)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+ch));return btoa(s);},
+  async listDir(path){
+    const r=await Sync.api(path);
+    if(r.status===404)return [];
+    if(!r.ok)throw Sync.err(r.status);
+    const j=await r.json();return Array.isArray(j)?j:[];
+  },
+  err(code){const e=new Error("gh"+code);e.ui=code===401?"GitHub 口令（token）不对或过期了，去“设置”重新生成一个。":code===403?"GitHub 拒绝访问：检查 token 有没有勾选这个仓库的 Contents 读写权限。":code===404?"找不到这个仓库：检查仓库名是不是“用户名/仓库名”这种写法。":"GitHub 出错（"+code+"）";return e;},
+  async fetchImg(id){
+    try{const r=await Sync.api("images/"+id+".jpg",{raw:true});if(!r.ok)return null;const b=await r.blob();const blob=new Blob([b],{type:"image/jpeg"});await DB.putImg(id,blob);return blob;}catch(_){return null;}
+  },
+  async run(manual){
+    if(!Sync.on()){if(manual)toast("先填 GitHub 仓库名和 token");return;}
+    if(Sync.busy){Sync.again=true;return;}
+    Sync.busy=true;Sync.setStatus("正在同步……");
+    try{
+      const root=await Sync.listDir("");
+      const dataEntry=root.find(f=>f.name==="data.json");
+      let remote={items:[]};
+      if(dataEntry){const r=await Sync.api("data.json",{raw:true});if(!r.ok)throw Sync.err(r.status);remote=JSON.parse(await r.text());}
+      const local=await DB.all();
+      const L=new Map(local.map(x=>[x.id,x])),R=new Map((remote.items||[]).map(x=>[x.id,x]));
+      let pulled=0,pushNeeded=false;const merged=[];
+      for(const id of new Set([...L.keys(),...R.keys()])){
+        const a=L.get(id),b=R.get(id);
+        if(a&&b){
+          const ta=a.updatedAt||0,tb=b.updatedAt||0;
+          if(tb>ta){await DB.putRaw(b);pulled++;merged.push(b);}
+          else{merged.push(a);if(ta>tb)pushNeeded=true;}
+        }else if(b){await DB.putRaw(b);pulled++;merged.push(b);}
+        else{merged.push(a);pushNeeded=true;}
+      }
+      if(pushNeeded||!dataEntry){
+        const text=JSON.stringify({app:"beikao",version:3,syncedAt:Date.now(),items:merged});
+        const r=await Sync.api("data.json",{method:"PUT",body:{message:"同步 "+new Date().toLocaleString("zh-CN"),content:Sync.b64FromBytes(new TextEncoder().encode(text)),sha:dataEntry?dataEntry.sha:undefined}});
+        if(r.status===409||r.status===422){Sync.again=true;}
+        else if(!r.ok)throw Sync.err(r.status);
+      }
+      // 图片：把本机有、仓库里没有的传上去
+      const need=new Set();
+      merged.forEach(x=>{if(x.kind==="mistake")(x.imageIds||[]).forEach(i=>need.add(i));if(x.kind==="chat")(x.messages||[]).forEach(m=>{if(m.imageId)need.add(m.imageId);});});
+      if(need.size){
+        const have=new Set((await Sync.listDir("images")).map(f=>f.name.replace(/\.jpg$/,"")));
+        let n=0;
+        for(const id of need){
+          if(have.has(id))continue;
+          const b=await DB.getImg(id);if(!b)continue;
+          Sync.setStatus(`正在上传图片（${++n}）……`);
+          const r=await Sync.api("images/"+id+".jpg",{method:"PUT",body:{message:"图片 "+id,content:Sync.b64FromBytes(new Uint8Array(await b.arrayBuffer()))}});
+          if(!r.ok&&r.status!==422)throw Sync.err(r.status);
+        }
+      }
+      try{localStorage.setItem("gh_last",String(Date.now()));}catch(_){}
+      Sync.setStatus("已同步　"+new Date().toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"}));
+      if(pulled)await load(true);
+      if(manual)toast(pulled?`同步好了，从别的设备拿到 ${pulled} 条更新`:"同步好了");
+    }catch(e){
+      console.error(e);
+      const msg=e.ui||(e instanceof TypeError?"连不上 GitHub，网络好一点再点“立即同步”。":"同步失败，稍后再试。");
+      Sync.setStatus("同步失败："+msg);if(manual)toast(msg);
+    }
+    Sync.busy=false;
+    if(Sync.again){Sync.again=false;setTimeout(()=>Sync.run(),1500);}
+  },
+  setStatus(t){Sync.status=t;const el=$("#syncStatus");if(el)el.textContent=t;const h=$("#syncDot");if(h)h.textContent=t.startsWith("已同步")?"☁ 已同步":t.startsWith("同步失败")?"☁ 同步失败":Sync.on()?"☁ 同步中":"";}
+};
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&Sync.on()&&S.ready)Sync.run();});
+
+/* ========== DeepSeek ========== */
+function blobToDataURL(b){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(b);});}
+async function askDeepSeek(text,imageDataURL){
+  const content=imageDataURL?[{type:"text",text},{type:"image_url",image_url:{url:imageDataURL}}]:text;
+  return askMessages([{role:"user",content}]);
+}
+async function askMessages(messages){
+  const key=getKey();
+  if(!key){const e=new Error("nokey");e.ui="还没填 DeepSeek API Key，先去“设置”页填好。";throw e;}
+  let r;
+  try{
+    r=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
+      body:JSON.stringify({model:MODEL,messages,stream:false})});
+  }catch(e){const er=new Error("net");er.ui="连不上 DeepSeek：请检查网络；网络没问题的话，换 Chrome 或 Edge 再试。";throw er;}
+  if(!r.ok){
+    let detail="";try{const j=await r.json();detail=(j.error&&j.error.message)||"";}catch(_){}
+    const map={401:"API Key 不对，去“设置”页重新粘贴。",402:"DeepSeek 账户余额不足，去 DeepSeek 开放平台充值。",429:"请求太频繁，等一分钟再试。",400:"请求被拒绝："+detail};
+    const er=new Error("http"+r.status);er.ui=map[r.status]||("DeepSeek 出错（"+r.status+"）"+(detail?"："+detail:""));throw er;
+  }
+  const j=await r.json();
+  return (j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||"";
+}
+function parseJSON(t){
+  let s=String(t||"").replace(/```json|```/g,"").trim();
+  const a=s.indexOf("{"),b=s.lastIndexOf("}");if(a>=0&&b>a)s=s.slice(a,b+1);
+  return JSON.parse(s);
+}
+const fatal=e=>e&&(e.message==="nokey"||e.message==="http401"||e.message==="http402");
+const cleanQ=s=>({question:String(s.question||""),options:Array.isArray(s.options)?s.options.map(String):[],answer:String(s.answer||""),analysis:String(s.analysis||"")});
+
+/* ========== 复习节奏 ========== */
+function nextDue(x){return x.review&&x.review.next?x.review.next:startOfDay(x.createdAt)+DAY;}
+function isDue(x){return !x.mastered&&nextDue(x)<=Date.now();}
+function logDaily(ok){
+  const k=dayKey(Date.now());const d=S.progress.daily[k]||{done:0,right:0};d.done++;if(ok)d.right++;S.progress.daily[k]=d;saveProgress();
+}
+function streakDays(){
+  let t=startOfToday();if(!(S.progress.daily[dayKey(t)]||{}).done)t-=DAY;
+  let n=0;while((S.progress.daily[dayKey(t)]||{}).done){n++;t-=DAY;}return n;
+}
+function applyResult(x,ok){
+  const st=Object.assign({right:0,wrong:0},x.stats||{});const rv=Object.assign({stage:0,next:0},x.review||{});
+  if(ok){st.right++;x.streak=(x.streak||0)+1;rv.stage=Math.min(rv.stage+1,INTERVALS.length-1);rv.next=startOfToday()+INTERVALS[rv.stage]*DAY;if(x.streak>=MASTER_STREAK)x.mastered=true;}
+  else{st.wrong++;x.streak=0;rv.stage=0;rv.next=startOfToday()+DAY;x.mastered=false;}
+  st.lastAt=Date.now();x.stats=st;x.review=rv;saveMistake(x);
+}
+function qToMistake(q,meta){
+  const doc=Object.assign({id:newId("m"),kind:"mistake",createdAt:Date.now(),
+    question:q.question,options:q.options||[],answer:q.answer,myAnswer:"",analysis:q.analysis,
+    similar:[],imageIds:[],mastered:false,streak:0,stats:{right:0,wrong:1},
+    review:{stage:0,next:startOfToday()+DAY}},meta);
+  S.mistakes.unshift(doc);saveMistake(doc);return doc;
+}
+function simToMistake(x,s){
+  const doc={id:newId("m"),kind:"mistake",createdAt:Date.now(),module:x.module,topic:x.topic,
+    question:s.question,options:s.options||[],answer:s.answer,myAnswer:"",analysis:s.analysis,
+    knowledge:x.knowledge,method:x.method,trap:x.trap,reason:"同类题做错，自动收入",
+    similar:[],imageIds:[],mastered:false,streak:0,stats:{right:0,wrong:1},
+    review:{stage:0,next:startOfToday()+DAY},fromId:x.id};
+  S.mistakes.unshift(doc);saveMistake(doc);return doc;
+}
+
+/* ========== 做题组件 ========== */
+function letters(ans){const m=String(ans||"").toUpperCase().replace(/[\s,，、.．:：]/g,"").match(/^[A-H]+/);return m?Array.from(new Set(m[0].split(""))).sort():[];}
+function optLetter(o,i){const m=String(o).trim().match(/^([A-Ha-h])(?=[\s.．、:：)）]|$)/);return m?m[1].toUpperCase():"ABCDEFGH"[i];}
+function resolveQ(qid){
+  const p=qid.split("|");
+  if(p[0]==="d"){const c=S.chats.find(c=>c.id===p[1]);const q=c&&c.drill[Number(p[2])];return q?{chat:c,q,kind:"drill"}:null;}const x=S.mistakes.find(m=>m.id===p[1]);if(!x)return null;
+  if(p[0]==="o")return {x,q:x,kind:"orig"};
+  const s=(x.similar||[])[Number(p[2])];return s?{x,q:s,kind:"sim",idx:Number(p[2])}:null;
+}
+function qBlock(qid,q){
+  const st=S.ans[qid]||{picked:[]};const ansL=letters(q.answer);const opts=q.options||[];
+  const choice=opts.length>0&&ansL.length>0;const multi=ansL.length>1;
+  let h=`<div class="q">${esc(q.question)}</div>`;
+  if(choice){
+    h+=opts.map((o,i)=>{const L=optLetter(o,i);let c="";
+      if(st.done){if(ansL.includes(L))c="right";else if(st.picked.includes(L))c="wrong";}
+      else if(st.picked.includes(L))c="sel";
+      return `<button class="opt ${c}" data-act="pick" data-qid="${esc(qid)}" data-l="${L}" ${st.done?"disabled":""}>${esc(o)}</button>`;}).join("");
+    if(multi&&!st.done)h+=`<div class="actions"><span class="hint">多选题，选完点提交</span><button class="btn small primary" data-act="submit" data-qid="${esc(qid)}">提交</button></div>`;
+  }else{
+    if(opts.length)h+=`<ul class="opts">${opts.map(o=>`<li>${esc(o)}</li>`).join("")}</ul>`;
+    if(!st.done&&!st.revealed)h+=`<div class="actions"><button class="btn small primary" data-act="reveal" data-qid="${esc(qid)}">做完了，看答案</button></div>`;
+  }
+  if(st.revealed&&!st.done){
+    h+=`<div class="ans"><p><b>答案：</b>${esc(q.answer)}</p>${q.analysis?`<p>${esc(q.analysis)}</p>`:""}</div><div class="actions"><button class="btn small primary" data-act="self" data-ok="1" data-qid="${esc(qid)}">我做对了</button><button class="btn small red" data-act="self" data-ok="0" data-qid="${esc(qid)}">我做错了</button></div>`;
+  }
+  if(st.done){
+    h+=`<div class="verdict ${st.ok?"ok":"bad"}">${st.ok?"✓ 做对了":"✗ 做错了，正确答案："+esc(q.answer)}${st.secs!=null?`<span class="hint" style="font-weight:400">　用时 ${st.secs} 秒</span>`:""}</div>`;
+    if(!st.revealed&&q.analysis)h+=`<div class="ans"><p>${esc(q.analysis)}</p></div>`;
+    if(st.note)h+=`<p class="hint">${esc(st.note)}</p>`;
+  }
+  return h;
+}
+function judge(qid,ok){
+  const r=resolveQ(qid);if(!r)return;const st=S.ans[qid]||(S.ans[qid]={picked:[]});
+  if(st.done)return;
+  if(ok==null)ok=JSON.stringify(st.picked.slice().sort())===JSON.stringify(letters(r.q.answer));
+  st.done=true;st.ok=ok;if(st.start)st.secs=Math.round((Date.now()-st.start)/1000);
+  logDaily(ok);
+  if(r.kind==="drill"){
+    if(!ok&&!r.q.added){r.q.added=true;saveChat(r.chat);
+      qToMistake(r.q,{module:modById(r.q.module)?r.q.module:"misc",topic:r.q.topic||"",knowledge:r.chat.drillFocus||"",method:"",trap:"",reason:"答疑后的练习做错，自动收入",fromChat:r.chat.id});
+      st.note="这道题已收进错题库，之后会按复习节奏再出现。";}
+  }
+  else if(r.kind==="orig"){applyResult(r.x,ok);st.note=ok?(r.x.mastered?"连续做对，已自动算作掌握。":"再做对一次就算掌握。"):"已重新排进明天的复习。";}
+  else if(!ok){
+    if(!r.q.added){r.q.added=true;saveMistake(r.x);simToMistake(r.x,r.q);st.note="这道同类题已收进错题库。";}
+    else st.note="这道题之前已经收进错题库了。";
+  }
+  if(S.practice&&current()==="practice"){const p=S.practice;ok?p.right++:p.wrong++;}
+  rerender();
+}
+
+/* ========== 路由与渲染 ========== */
+const VIEWS=["home","capture","bank","ask","notes","practice","export","settings"];
+function current(){const h=location.hash.replace("#","");return VIEWS.includes(h)?h:"home";}
+function setTabs(){const c=current();document.querySelectorAll("#tabs a").forEach(a=>{if(a.getAttribute("href")==="#"+c)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current");});}
+window.addEventListener("hashchange",()=>{setTabs();render();window.scrollTo(0,0);});
+
+function banner(){
+  if(S.err)return `<div class="banner">${esc(S.err)}</div>`;
+  if(S.ready&&!getKey()&&current()!=="settings")return `<div class="banner">第一次使用：先去 <a href="#settings">设置</a> 填 DeepSeek API Key，才能识题和整理。</div>`;
+  return "";
+}
+function renderHeader(){
+  $("#examTitle").textContent=exam()+"备考";document.title=exam()+"备考工作台";
+  const el=$("#countdown");const d=S.progress.examDate;
+  if(!d){el.innerHTML="";return;}
+  const days=Math.ceil((new Date(d+"T00:00:00").getTime()-startOfToday())/DAY);
+  el.innerHTML=days>=0?`距考试<b>${days}</b>天`:"考试日期已过";
+}
+function render(){
+  renderHeader();
+  const v=current(),root=$("#view");
+  if(!S.ready){root.innerHTML=banner()+`<p class="hint">正在加载……</p>`;return;}
+  const map={home:viewHome,capture:viewCapture,bank:viewBank,ask:viewAsk,notes:viewNotes,practice:viewPractice,export:viewExport,settings:viewSettings};
+  root.innerHTML=banner()+map[v]();
+  if(v==="capture")bindCapture();
+  hydrateImages();
+}
+function rerender(){
+  if(current()==="capture"){const r=$("#recent");if(r){r.innerHTML=recentHtml();hydrateImages();}}
+  else{const y=window.scrollY;render();window.scrollTo(0,y);}
+}
+
+/* ---------- 首页 ---------- */
+function modStats(mid){
+  const ts=allTopics(mid);let s=0,m=0;
+  ts.forEach(t=>{const v=S.progress.status[topicKey(mid,t)]||0;if(v===1)s++;if(v===2)m++;});
+  return {total:ts.length,s,m};
+}
+function errCount(mid,topic){return S.mistakes.filter(x=>x.module===mid&&x.topic===topic&&!x.mastered).length;}
+function viewHome(){
+  let total=0,score=0;
+  mods().forEach(m=>{const st=modStats(m.id);total+=st.total;score+=st.m+st.s*0.5;});
+  const pct=total?Math.round(score/total*100):0;
+  const due=S.mistakes.filter(isDue).length;
+  const td=S.progress.daily[dayKey(Date.now())]||{done:0,right:0};
+  const open=S.mistakes.filter(x=>!x.mastered).length;
+  let html="";
+  mods().forEach(m=>{
+    const st=modStats(m.id);
+    const mw=st.total?st.m/st.total*100:0, sw=st.total?st.s/st.total*100:0;
+    const chips=m.topics.map(t=>{
+      const k=topicKey(m.id,t),s=S.progress.status[k]||0,e=errCount(m.id,t);
+      return `<button class="chip ${S.topicOpen===k?"on":""}" data-act="openTopic" data-key="${esc(k)}" data-s="${s}" title="${STATUS_TXT[s]}"><span class="dot"></span>${esc(t)}${e?`<span class="err">错${e}</span>`:""}</button>`;
+    }).join("");
+    html+=`<div class="mod"><div class="mod-head"><h3>${esc(m.name)}</h3><div class="bar"><i class="m" style="width:${mw}%"></i><i class="s" style="width:${sw}%"></i></div><span class="pct">掌握 ${st.m}／学过 ${st.s}／共 ${st.total}</span></div>
+      <div class="chips">${chips}<button class="chip" data-act="addTopic" data-mod="${m.id}">＋ 加知识点</button></div>
+      ${S.topicOpen.startsWith(m.id+"::")?topicDetail(m.id,S.topicOpen.slice(m.id.length+2)):""}
+      <div class="actions"><button class="btn small" data-act="genModule" data-mod="${m.id}" ${S.modBusy?"disabled":""}>${S.modBusy===m.id?"正在生成本模块要点……":"一次生成本模块所有要点"}</button></div></div>`;
+  });
+  return `<section class="section"><div class="panel">
+      <div class="stats">
+        <div class="stat red"><div class="n">${due}</div><div class="l">今天该复习</div></div>
+        <div class="stat"><div class="n">${td.done}</div><div class="l">今天做题${td.done?`，对 ${Math.round(td.right/td.done*100)}%`:""}</div></div>
+        <div class="stat"><div class="n">${streakDays()}</div><div class="l">连续打卡天数</div></div>
+        <div class="stat"><div class="n">${open}</div><div class="l">错题没掌握</div></div>
+        <div class="stat"><div class="n">${pct}%</div><div class="l">知识点进度</div></div>
+      </div>
+      <div class="actions">${due?`<button class="btn primary" data-act="startDue">开始今天的复习（${due} 道）</button>`:`<span class="hint">今天没有到期的错题。</span>`}</div>
+      <div class="row" style="margin-top:10px"><label class="hint" for="examDate">考试日期</label><input type="date" id="examDate" value="${esc(S.progress.examDate||"")}"></div>
+    </div></section>
+    <section class="section"><h2>知识点进度</h2>
+      <div class="legend"><span>点知识点：看要点、相关错题，标记学习状态</span><span>红字是这个知识点还没掌握的错题数</span></div>
+      <div class="panel">${html}</div>
+    </section>`;
+}
+function topicDetail(mid,t){
+  const k=topicKey(mid,t),s=S.progress.status[k]||0,note=S.topics[k],busy=S.topicBusy.has(k);
+  const errs=S.mistakes.filter(x=>x.module===mid&&x.topic===t);
+  const errHtml=errs.length?errs.map(x=>`<div class="mini">${x.mastered?"✓ ":""}${esc(String(x.question).slice(0,80))}${String(x.question).length>80?"……":""}${x.method?`<br><span class="hint">方法：${esc(x.method)}</span>`:""}</div>`).join("")+`<div class="actions"><button class="btn small" data-act="practiceTopic" data-key="${esc(k)}">练这个知识点的错题</button></div>`:`<p class="hint">这个知识点还没有错题。</p>`;
+  return `<div class="tdetail"><div class="row" style="justify-content:space-between"><h4>${esc(t)}</h4>
+    <div class="seg" role="group" aria-label="学习状态">${STATUS_TXT.map((n,i)=>`<button data-act="setStatus" data-key="${esc(k)}" data-v="${i}" aria-pressed="${s===i}">${n}</button>`).join("")}</div></div>
+    ${note?`<div class="md">${md(note.content)}</div>`:`<p class="hint">还没有要点。</p>`}
+    <div class="actions"><button class="btn small ${note?"":"primary"}" data-act="genTopic" data-key="${esc(k)}" ${busy?"disabled":""}>${busy?"正在生成，大约半分钟……":note?"重新生成要点":"生成这个知识点的要点"}</button>
+    <button class="btn small" data-act="askTopic" data-key="${esc(k)}">这个知识点没懂，问一问</button>
+    <button class="btn small red" data-act="delTopic" data-key="${esc(k)}">删掉这个知识点</button></div>
+    <h4 style="margin-top:14px">相关错题（${errs.length}）</h4>${errHtml}</div>`;
+}
+async function genTopic(k){
+  const mid=k.slice(0,k.indexOf("::")),t=k.slice(k.indexOf("::")+2);
+  const prompt=`你是${exam()}笔试的辅导老师。考生情况：${S.progress.about||"无"}
+请为“${modName(mid)}”模块里的知识点“${t}”写一张备考要点卡，用 Markdown，中文全角标点，600字以内，讲人话，不要寒暄。
+如果这是计算、推理类知识点，按这个结构写：
+### 这是什么
+### 核心公式或规律（能直接背的版本）
+### 解题步骤（3到5步）
+### 例题（一道典型题，带选项、答案和最快解法）
+### 常见坑
+### 性价比提醒（考场上值不值得做，什么情况下应该跳过）
+如果这是记忆、理论类知识点，按这个结构写：
+### 核心概念（能直接背的定义）
+### 必背要点（3到6条）
+### 常见考法（会怎么出题、容易混淆的概念）
+### 记忆口诀（有就写，没有就省略）`;
+  S.topicBusy.add(k);rerender();
+  try{
+    const content=await askDeepSeek(prompt);
+    const doc={id:"t::"+k,kind:"topic",key:k,createdAt:Date.now(),content};
+    await DB.put(doc);S.topics[k]=doc;
+  }catch(e){console.error(e);toast(e.ui||"生成失败，可以再试一次");S.topicBusy.delete(k);rerender();throw e;}
+  S.topicBusy.delete(k);rerender();
+}
+
+/* ---------- 答疑 ---------- */
+function saveChat(c){DB.put(c).catch(saveFail);}
+function curChat(){return S.chats.find(c=>c.id===S.askUi.cur)||null;}
+function newChat(context,prefill){
+  const c={id:newId("c"),kind:"chat",createdAt:Date.now(),title:"新问题",context:context||"",messages:[],drill:[],drillFocus:""};
+  S.chats.unshift(c);S.askUi.cur=c.id;S.askUi.input=prefill||"";S.askUi.img=null;saveChat(c);
+  if(current()!=="ask")location.hash="#ask";else render();
+  setTimeout(()=>{const el=$("#askIn");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}},80);
+}
+function viewAsk(){
+  const u=S.askUi,c=curChat();
+  const hist=S.chats.length?`<select id="askHist" aria-label="历史提问"><option value="">— 以前问过的 —</option>${S.chats.map(h=>`<option value="${h.id}" ${h.id===u.cur?"selected":""}>${fmtDate(h.createdAt)}　${esc(h.title)}</option>`).join("")}</select>`:"";
+  let body="";
+  if(c){
+    if(c.context)body+=`<div class="ctx">${esc(c.context)}</div>`;
+    body+=c.messages.map(m=>m.role==="user"
+      ?`<div class="msg me"><div class="who">我</div><div class="q">${esc(m.content)}</div>${m.imageId?`<img data-img="${esc(m.imageId)}" alt="我发的图">`:""}</div>`
+      :`<div class="msg ai"><div class="who">老师</div><div class="md">${md(m.content)}</div></div>`).join("");
+    if(u.busy)body+=`<div class="msg ai"><div class="who">老师</div><p class="hint">正在想，大约半分钟……</p></div>`;
+  }
+  const hasAns=c&&c.messages.some(m=>m.role==="assistant");
+  let drill="";
+  if(c&&c.drill.length){
+    const batches={};c.drill.forEach((q,i)=>{(batches[q.batch||1]=batches[q.batch||1]||[]).push(i);});
+    drill=Object.keys(batches).sort((a,b)=>b-a).map(bn=>{
+      const idx=batches[bn];const done=idx.filter(i=>(S.ans["d|"+c.id+"|"+i]||{}).done);const right=done.filter(i=>S.ans["d|"+c.id+"|"+i].ok).length;
+      return `<div class="panel" style="margin-top:12px"><h3 style="font-size:16px">第 ${bn} 组针对练习${c.drill[idx[0]].focus?"：":""}${esc(c.drill[idx[0]].focus||"")}</h3>
+        <p class="hint">${done.length?`已做 ${done.length}／${idx.length}，做对 ${right} 道。`:""}做错的题会自动收进错题库。</p>
+        ${idx.map((i,n)=>`<div class="drillq"><p class="hint" style="margin:0">${n+1}.${c.drill[i].added?"　已收进错题库":""}</p>${qBlock("d|"+c.id+"|"+i,c.drill[i])}</div>`).join("")}</div>`;
+    }).join("");
+  }
+  return `<section class="section"><h2>答疑</h2>
+    <div class="filters"><button class="btn primary" data-act="newChat">问个新问题</button>${hist}${c?`<button class="btn small red" data-act="delChat">删除这次提问</button>`:""}</div>
+    ${c?body:`<div class="empty">哪里没懂，点“问个新问题”。也可以在错题或知识点上点“没懂，问一问”，题目会自动带过来。</div>`}
+    ${c?`<div class="panel" style="margin-top:10px">
+      <textarea id="askIn" placeholder="把没懂的地方说出来，越具体越好。可以直接按 Ctrl＋V 贴一张题目截图。Ctrl＋回车发送。">${esc(u.input)}</textarea>
+      ${u.img?`<div class="thumbs" style="justify-content:flex-start"><span class="thumb"><img src="${URL.createObjectURL(u.img)}" alt="要发的图"><button data-act="dropAskImg" title="不发这张">×</button></span></div>`:""}
+      <div class="actions"><button class="btn primary" data-act="sendAsk" ${u.busy?"disabled":""}>发送</button>
+      ${hasAns?`<button class="btn" data-act="genDrill" ${u.drillBusy?"disabled":""}>${u.drillBusy?"正在出题……":"按我没懂的地方出 5 道题"}</button><button class="btn" data-act="saveAskNote">把讲解存进知识库</button>`:""}</div>
+    </div>`:""}
+    ${drill}</section>`;
+}
+function tutorSystem(c){
+  return `你是${exam()}笔试的辅导老师，正在给考生一对一答疑。考生情况：${S.progress.about||"无"}
+讲解要求：讲得非常简单，像跟朋友聊天；先用一个生活里的例子把道理讲通，再回到题目一步一步做；尽量少用符号和术语，非用不可时马上解释；段落短；中文全角标点；最后用一两句话总结“记住这一点就行”。考生说还没懂时，换一个角度、换一个例子重讲，不要重复原话。
+${c.context?"考生这次问的内容和它有关：\n"+c.context:""}`;
+}
+async function sendAsk(){
+  const u=S.askUi,c=curChat();if(!c||u.busy)return;
+  const text=u.input.trim();if(!text&&!u.img){toast("先写下哪里没懂");return;}
+  if(!getKey()){toast("先去“设置”页填 DeepSeek API Key");return;}
+  const msg={role:"user",content:text||"（看图）"};let dataURL=null;
+  if(u.img){const blob=await shrink(u.img);msg.imageId=newId("img");await DB.putImg(msg.imageId,blob);dataURL=await blobToDataURL(blob);}
+  c.messages.push(msg);if(c.title==="新问题")c.title=(text||"看图提问").slice(0,24);
+  u.input="";u.img=null;u.busy=true;saveChat(c);render();window.scrollTo(0,document.body.scrollHeight);
+  try{
+    const api=[{role:"system",content:tutorSystem(c)}].concat(c.messages.map((m,i)=>{
+      if(m.role==="user"&&m.imageId&&i===c.messages.length-1&&dataURL)return {role:"user",content:[{type:"text",text:m.content},{type:"image_url",image_url:{url:dataURL}}]};
+      return {role:m.role,content:m.imageId?m.content+"（附了一张题目图片）":m.content};
+    }));
+    const reply=await askMessages(api);
+    c.messages.push({role:"assistant",content:reply});saveChat(c);
+  }catch(e){console.error(e);toast(e.ui||"没问成功，再发一次");c.messages.pop();u.input=msg.content==="（看图）"?"":msg.content;saveChat(c);}
+  u.busy=false;render();window.scrollTo(0,document.body.scrollHeight);
+}
+async function genDrill(){
+  const u=S.askUi,c=curChat();if(!c||u.drillBusy)return;
+  const talk=c.messages.map(m=>(m.role==="user"?"考生：":"老师：")+m.content).join("\n\n").slice(-6000);
+  const prompt=`你是${exam()}笔试的辅导老师。考生情况：${S.progress.about||"无"}
+${c.context?"考生问的题目或知识点：\n"+c.context+"\n":""}下面是你和考生的答疑对话：
+${talk}
+请判断考生到底卡在哪一点，然后专门针对这一点出 5 道练习题，由易到难：前两道几乎只考这一个点，后面逐步接近真题难度。都出选择题，options 每项以“A. ”这种形式开头，answer 只写选项字母；analysis 用跟上面讲解一致的思路，100字以内。
+module 从下面模块清单的英文代号里选，topic 从该模块的知识点里选最贴切的一个。
+模块清单：
+${moduleListText()}
+${c.drill.length?"之前已经出过的题（不要重复）："+c.drill.map(q=>q.question.slice(0,40)).join("｜")+"\n":""}只输出一个 JSON 对象，不要任何其他文字，格式：{"focus":"一句话说明这组题练什么","items":[{"module":"","topic":"","question":"","options":[],"answer":"","analysis":""}]}`;
+  u.drillBusy=true;render();
+  try{
+    const res=parseJSON(await askDeepSeek(prompt));
+    const items=(Array.isArray(res.items)?res.items:[]).slice(0,6).filter(q=>q&&q.question);
+    if(!items.length)throw Object.assign(new Error("empty"),{ui:"没出成功，再点一次。"});
+    const batch=(c.drill.reduce((m,q)=>Math.max(m,q.batch||1),0))+1;
+    items.forEach(q=>c.drill.push(Object.assign(cleanQ(q),{module:String(q.module||""),topic:String(q.topic||"").slice(0,40),focus:String(res.focus||""),batch})));
+    c.drillFocus=String(res.focus||"");saveChat(c);toast("出好了，往下翻");
+  }catch(e){console.error(e);toast(e.ui||"出题失败，再点一次");}
+  u.drillBusy=false;render();
+}
+function saveAskNote(){
+  const c=curChat();if(!c)return;
+  const content=c.messages.map(m=>m.role==="user"?"**我问：**"+m.content:m.content).join("\n\n");
+  const doc={id:newId("n"),kind:"note",createdAt:Date.now(),title:"答疑："+c.title,rangeLabel:"答疑",content};
+  DB.put(doc).then(()=>{S.notes.unshift(doc);toast("已存进知识库");}).catch(saveFail);
+}
+function mistakeContext(x){return `题目：${x.question}\n${(x.options||[]).join("\n")}\n正确答案：${x.answer}${x.myAnswer?"　我当时选：" +x.myAnswer:""}\n原解析：${x.analysis||"无"}`;}
+
+/* ---------- 收错题 ---------- */
+function recentHtml(){return S.mistakes.slice(0,5).map(cardHtml).join("")||`<div class="empty">还没有错题，拍一张试试。</div>`;}
+function viewCapture(){
+  const c=S.capture;
+  return `<section class="section"><h2>收错题</h2>
+    <div class="panel">
+      <div class="drop ${c.files.length?"has":""}" id="drop">
+        <input type="file" id="fileIn" accept="image/*" multiple hidden>
+        <button class="btn primary" id="pick">拍照或选截图</button>
+        <p class="hint" style="margin:8px 0 0">也可以直接把图片拖进这个框，或者截图后按 Ctrl＋V 粘贴。可以攒好几张再一起识别。</p>
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+      <p style="margin:14px 0 6px">补充说明（可不填）</p>
+      <textarea id="capNote" placeholder="比如：只要第3题；我选了B，因为没看清“同比”">${esc(c.note)}</textarea>
+      <div class="row" style="margin-top:10px"><button class="btn primary" id="runCap" ${c.busy?"disabled":""}>${c.busy?"正在识别……":"识别并存入错题库"}</button></div>
+      <div class="log" id="capLog">${esc(c.log)}</div>
+    </div></section>
+    <section class="section"><h2>最近收录</h2><div id="recent">${recentHtml()}</div></section>`;
+}
+
+/* ---------- 错题卡 ---------- */
+function statusLine(x){
+  if(x.mastered)return `<span class="tag">已掌握</span>`;
+  const n=nextDue(x),due=n<=Date.now();
+  return `<span class="tag red">${due?"今天该复习":"下次复习 "+fmtDate(n)}</span>${x.streak?`<span>连续做对 ${x.streak} 次</span>`:""}`;
+}
+function imgToggle(x){
+  if(!(x.imageIds||[]).length)return "";
+  if(S.showImg.has(x.id))return x.imageIds.map(id=>`<img class="orig" data-img="${esc(id)}" alt="原题截图">`).join("")+`<div class="actions"><button class="btn small" data-act="showImg" data-id="${x.id}">收起原图</button></div>`;
+  return `<div class="actions"><button class="btn small" data-act="showImg" data-id="${x.id}">看原图${x.module==="panduan"?"（图形题需要看图）":""}，可能带答案</button></div>`;
+}
+function cardHtml(x){
+  const open=S.bank.open.has(x.id);const qid="o|"+x.id;const st=S.ans[qid];
+  const imgs=(x.imageIds||[]).map(id=>`<img class="orig" data-img="${esc(id)}" alt="错题原图">`).join("");
+  const sims=(x.similar||[]).map((s,i)=>`<div class="sim"><h4>同类题 ${i+1}${s.added?"（做错过，已收入错题库）":""}</h4>${qBlock("s|"+x.id+"|"+i,s)}${S.ans["s|"+x.id+"|"+i]&&S.ans["s|"+x.id+"|"+i].done?`<div class="actions"><button class="btn small" data-act="redo" data-qid="s|${x.id}|${i}">再做一次</button></div>`:""}</div>`).join("");
+  const stats=x.stats&&(x.stats.right||x.stats.wrong)?`做对 ${x.stats.right||0} 次，做错 ${x.stats.wrong||0} 次`:"";
+  const modOpts=mods().concat([MISC]).map(m=>`<option value="${m.id}" ${m.id===x.module?"selected":""}>${esc(m.name)}</option>`).join("");
+  const done=st&&st.done;
+  return `<article class="card ${x.mastered?"done":""}">
+    <div class="card-meta"><span class="tag">${esc(modName(x.module))}</span><span class="tag">${esc(x.topic||"")}</span><span>${fmtDate(x.createdAt)}</span>${statusLine(x)}${stats?`<span>${stats}</span>`:""}${x.fromId?`<span>来自同类题</span>`:""}</div>
+    ${qBlock(qid,x)}
+    ${done||open?`<div class="ans">
+      ${x.myAnswer?`<p><span class="tag red">当初选了 ${esc(x.myAnswer)}</span></p>`:""}
+      ${x.knowledge?`<p><b>知识点：</b>${esc(x.knowledge)}</p>`:""}
+      ${x.method?`<p><b>方法：</b>${esc(x.method)}</p>`:""}
+      ${x.trap?`<p><b>易错：</b>${esc(x.trap)}</p>`:""}
+      ${x.reason?`<p><b>说明：</b>${esc(x.reason)}</p>`:""}
+    </div>`:""}
+    ${open||(x.module==="panduan"&&!done)?imgToggle(x):""}
+    ${open?`${sims}
+      <div class="actions"><button class="btn small" data-act="moreSim" data-id="${x.id}" ${S.simBusy.has(x.id)?"disabled":""}>${S.simBusy.has(x.id)?"正在出题……":"再出两道同类题"}</button></div>
+      <div class="actions"><select data-edit-mod="${x.id}" aria-label="模块">${modOpts}</select><input type="text" data-edit-topic="${x.id}" value="${esc(x.topic||"")}" style="width:11em" aria-label="知识点"><button class="btn small" data-act="saveCat" data-id="${x.id}">保存分类</button><button class="btn small red" data-act="del" data-id="${x.id}">删除这道题</button></div>`:""}
+    <div class="actions">
+      ${done?`<button class="btn small" data-act="redo" data-qid="${qid}">再做一次</button>`:""}
+      <button class="btn small" data-act="askAbout" data-id="${x.id}">这题没懂，问一问</button>
+      <button class="btn small" data-act="toggle" data-id="${x.id}">${open?"收起":`同类题（${(x.similar||[]).length}）和更多`}</button>
+    </div></article>`;
+}
+
+function filterList(f){
+  const q=(f.q||"").trim();
+  return S.mistakes.filter(x=>(f.mod==="all"||x.module===f.mod)&&inRange(x.createdAt,f.range)
+    &&(f.state==="all"||(f.state==="open"?!x.mastered:f.state==="due"?isDue(x):x.mastered))
+    &&(!f.topic||x.topic===f.topic)
+    &&(!q||[x.question,x.topic,x.knowledge].join(" ").includes(q)));
+}
+function modSelect(id,val){
+  return `<select id="${id}"><option value="all" ${val==="all"?"selected":""}>全部模块</option>${mods().concat([MISC]).map(m=>`<option value="${m.id}" ${val===m.id?"selected":""}>${esc(m.name)}</option>`).join("")}</select>`;
+}
+function rangeSelect(id,val,label){return `<select id="${id}" aria-label="${label||"收录时间"}">${["today","week","all"].map(r=>`<option value="${r}" ${val===r?"selected":""}>${r==="all"?"不限时间":RANGE_TXT[r]+"收的"}</option>`).join("")}</select>`;}
+function scopeSelect(id,val){return `<select id="${id}">${[["due","今天该复习的"],["open","全部没掌握的"],["done","已掌握的"],["all","全部错题"]].map(([v,t])=>`<option value="${v}" ${val===v?"selected":""}>${t}</option>`).join("")}</select>`;}
+
+function viewBank(){
+  const f=S.bank,list=filterList(f);
+  return `<section class="section"><h2>错题库</h2>
+    <div class="filters">${modSelect("fMod",f.mod)}${rangeSelect("fRange",f.range)}${scopeSelect("fState",f.state)}
+      <input type="text" id="fQ" placeholder="搜题干或知识点" value="${esc(f.q)}" style="width:12em">
+      <span class="hint">共 ${list.length} 道</span>
+      ${list.length?`<button class="btn small primary" data-act="practiceBank">把这些随机练一遍</button>`:""}</div>
+    <p class="hint">直接点选项作答。连续做对 ${MASTER_STREAK} 次自动算掌握，做错会自动排进明天的复习；同类题做错会自动收进错题库。</p>
+    ${list.map(cardHtml).join("")||`<div class="empty">这里还没有题。</div>`}</section>`;
+}
+
+/* ---------- 知识库 ---------- */
+function viewNotes(){
+  const u=S.notesUi;
+  const n=S.mistakes.filter(x=>inRange(x.createdAt,u.range)).length;
+  const notes=S.notes.map(x=>`<article class="note"><div class="card-meta"><span>${fmtDate(x.createdAt)}</span><span class="tag">${esc(x.rangeLabel||"")}</span></div><h3>${esc(x.title)}</h3><div class="md">${md(x.content)}</div><div class="actions"><button class="btn small red" data-act="delNote" data-id="${x.id}">删除</button></div></article>`).join("");
+  return `<section class="section"><h2>整理成知识卡</h2>
+    <div class="panel"><p class="hint" style="margin-top:0">把一段时间的错题按知识点归纳成可背诵的卡片：核心规律、你的错因、明天先复习什么。</p>
+      <div class="row">${rangeSelect("nRange",u.range)}<button class="btn primary" data-act="summarize" ${u.busy||!n?"disabled":""}>${u.busy?"正在整理，大约要半分钟……":`整理这 ${n} 道错题`}</button></div>
+    </div></section>
+    <section class="section"><h2>我的知识库</h2>${notes||`<div class="empty">还没有知识卡。每天收完错题，整理一次。</div>`}</section>`;
+}
+
+/* ---------- 练习 ---------- */
+function viewPractice(){
+  const p=S.practice,e=S.exp;
+  if(!p){
+    return `<section class="section"><h2>随机练习</h2><div class="panel">
+      <p class="hint" style="margin-top:0">题目打乱顺序。电脑上可以直接按键盘 A、B、C、D 作答，按回车进入下一题。</p>
+      <div class="filters">${scopeSelect("pScope",e.scope)}${modSelect("pMod",e.mod)}${rangeSelect("pRange",e.range)}
+      <label class="chk"><input type="checkbox" id="pSim" ${e.sim?"checked":""}>加入同类题</label>
+      <label class="chk"><input type="checkbox" id="pTimer" ${e.timer?"checked":""}>显示计时</label></div>
+      <button class="btn primary" data-act="startPractice">开始练习</button></div></section>`;
+  }
+  if(p.i>=p.deck.length){
+    const rate=p.right+p.wrong?Math.round(p.right/(p.right+p.wrong)*100):0;
+    return `<section class="section"><h2>这一轮做完了</h2><div class="pcard"><div class="stats"><div class="stat"><div class="n">${p.right}</div><div class="l">做对</div></div><div class="stat red"><div class="n">${p.wrong}</div><div class="l">做错</div></div><div class="stat"><div class="n">${rate}%</div><div class="l">正确率</div></div></div><div class="actions"><button class="btn primary" data-act="endPractice">再来一轮</button></div></div></section>`;
+  }
+  const qid=p.deck[p.i],r=resolveQ(qid);
+  if(!r){p.i++;return viewPractice();}
+  const st=S.ans[qid]||(S.ans[qid]={picked:[],start:Date.now()});
+  const imgs=r.kind==="orig"?imgToggle(r.x):"";
+  return `<section class="section"><div class="pprog">第 ${p.i+1}／${p.deck.length} 题　${esc(modName(r.x.module))}・${esc(r.x.topic||"")}${r.kind==="sim"?"　同类题":""}${e.timer&&!st.done?`<span class="ptimer" id="ptimer">0 秒</span>`:""}</div>
+    <div class="pcard">${qBlock(qid,r.q)}${imgs}
+    ${st.done&&r.kind==="orig"&&r.x.method?`<p><b>方法：</b>${esc(r.x.method)}</p>`:""}
+    <div class="actions">${st.done?`<button class="btn primary" data-act="next">下一题（回车）</button>`:""}<button class="btn" data-act="endPractice">结束</button></div>
+    </div></section>`;
+}
+function startPracticeWith(list,includeSim){
+  const deck=[];list.forEach(x=>{deck.push("o|"+x.id);if(includeSim)(x.similar||[]).forEach((s,i)=>{if(!s.added)deck.push("s|"+x.id+"|"+i);});});
+  if(!deck.length){toast("没有符合条件的题");return;}
+  deck.forEach(q=>delete S.ans[q]);
+  S.practice={deck:shuffle(deck),i:0,right:0,wrong:0};
+  if(current()!=="practice")location.hash="#practice";else render();
+}
+setInterval(()=>{const el=$("#ptimer");if(!el||!S.practice)return;const st=S.ans[S.practice.deck[S.practice.i]];if(st&&st.start&&!st.done)el.textContent=Math.round((Date.now()-st.start)/1000)+" 秒";},1000);
+document.addEventListener("keydown",e=>{
+  if(e.target&&e.target.id==="askIn"&&e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();sendAsk();return;}
+  if(current()!=="practice"||!S.practice)return;
+  const t=e.target;if(t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.tagName==="SELECT"))return;
+  const p=S.practice;if(p.i>=p.deck.length)return;
+  const qid=p.deck[p.i],st=S.ans[qid];
+  if(e.key==="Enter"){if(st&&st.done){p.i++;render();window.scrollTo(0,0);}else{const r=resolveQ(qid);if(r&&letters(r.q.answer).length>1&&st&&st.picked.length)judge(qid);}e.preventDefault();return;}
+  const L=e.key.toUpperCase();
+  if(/^[A-H]$/.test(L)){const b=document.querySelector(`.opt[data-qid="${CSS.escape(qid)}"][data-l="${L}"]`);if(b&&!b.disabled)b.click();}
+});
+
+/* ---------- 导出 ---------- */
+function viewExport(){
+  const e=S.exp,n=filterList({mod:e.mod,range:e.range,state:e.scope,q:""}).length;
+  return `<section class="section"><h2>导出</h2><div class="panel">
+    <div class="filters">${scopeSelect("eScope",e.scope)}${modSelect("eMod",e.mod)}${rangeSelect("eRange",e.range)}
+      <label class="chk"><input type="checkbox" id="eSim" ${e.sim?"checked":""}>加入同类题</label>
+      <span class="hint">选中 ${n} 道错题</span></div>
+    <div class="actions">
+      <button class="btn primary" data-act="expPaper" ${n?"":"disabled"}>导出错题重练卷</button>
+      <button class="btn" data-act="expPaperHtml" ${n?"":"disabled"}>导出打印版（可存PDF）</button>
+      <button class="btn" data-act="expKnow">导出知识库背诵版</button>
+    </div>
+    <p class="hint">重练卷题目打乱，答案和解析统一放在最后。知识库背诵版包含知识点要点、知识卡和每道错题的方法与易错点。</p>
+  </div></section>`;
+}
+
+/* ---------- 设置 ---------- */
+function modulesText(){return mods().map(m=>m.name+"："+m.topics.join("、")).join("\n");}
+function viewSettings(){
+  const k=getKey(),p=S.progress;
+  return `<section class="section"><h2>考试设置</h2><div class="panel cfg">
+    <p class="hint" style="margin-top:0">换一场考试，只要改这里，不用动代码。</p>
+    <p style="margin:0 0 4px">考试名称</p><input type="text" id="cfgExam" value="${esc(p.examName)}" style="width:100%">
+    <p style="margin:12px 0 4px">我的情况（会告诉 DeepSeek，让它讲得更贴合你）</p><textarea id="cfgAbout">${esc(p.about)}</textarea>
+    <p style="margin:12px 0 4px">模块和知识点：一行一个模块，写成“模块名：知识点1、知识点2”</p><textarea id="cfgMods">${esc(modulesText())}</textarea>
+    <div class="actions"><button class="btn primary" data-act="saveCfg">保存考试设置</button></div>
+    <p class="hint">改模块名或删掉模块，不会删除错题；对不上的错题会显示在“未分类”里，可以在错题上重新选模块。</p>
+  </div></section>
+  <section class="section"><h2>DeepSeek API Key</h2><div class="panel">
+    <p class="hint" style="margin-top:0">Key 只存在这个浏览器里，不会发给除 DeepSeek 以外的任何地方。</p>
+    <div class="row"><input type="text" id="keyIn" placeholder="sk-开头的一串字符" value="${esc(k)}" style="flex:1;min-width:14em" autocomplete="off"><button class="btn primary" data-act="saveKey">保存</button><button class="btn" data-act="testKey">测试连接</button></div>
+    <p class="log">${esc(S.testMsg)}</p>
+  </div></section>
+  <section class="section"><h2>多设备同步（GitHub）</h2><div class="panel">
+    <p class="hint" style="margin-top:0">填好以后，手机和电脑会通过你的 GitHub 私有仓库自动同步：打开页面、切回页面、改动后几秒钟，都会同步一次。每台设备都要填一次。</p>
+    <p style="margin:0 0 4px">数据仓库（写成“用户名/仓库名”）</p><input type="text" id="ghRepo" placeholder="amityqiu/beikao-data" value="${esc(Sync.cfg().repo)}" style="width:100%" autocomplete="off">
+    <p style="margin:12px 0 4px">GitHub token</p><input type="text" id="ghToken" placeholder="github_pat_ 开头的一串字符" value="${esc(Sync.cfg().token)}" style="width:100%" autocomplete="off">
+    <div class="actions"><button class="btn primary" data-act="saveSync">保存并同步</button><button class="btn" data-act="syncNow" ${Sync.on()?"":"disabled"}>立即同步</button></div>
+    <p class="log" id="syncStatus">${esc(Sync.status)}</p>
+  </div></section>
+  <section class="section"><h2>备份</h2><div class="panel">
+    <p class="hint" style="margin-top:0">所有内容都存在这个浏览器里。清理浏览器数据会把它们一起删掉，所以每周导出一次备份，存到网盘或者发给自己。</p>
+    <div class="actions"><button class="btn primary" data-act="backup">导出备份</button><button class="btn" data-act="restore">从备份恢复</button><input type="file" id="restoreIn" accept=".json,application/json" hidden></div>
+  </div></section>`;
+}
+function saveCfg(){
+  const name=$("#cfgExam").value.trim()||"考试";const about=$("#cfgAbout").value.trim();
+  const lines=$("#cfgMods").value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  const out=[];
+  for(const [i,l] of lines.entries()){
+    const cut=l.search(/[：:]/);const mname=(cut>=0?l.slice(0,cut):l).trim();if(!mname)continue;
+    const topics=cut>=0?Array.from(new Set(l.slice(cut+1).split(/[、，,；;]/).map(t=>t.trim()).filter(Boolean))):[];
+    const old=mods().find(m=>m.name===mname);
+    out.push({id:old?old.id:"u"+Date.now().toString(36)+i,name:mname,topics});
+  }
+  if(!out.length){toast("至少要有一个模块");return;}
+  Object.assign(S.progress,{examName:name,about,modules:out});saveProgress();S.topicOpen="";render();toast("考试设置已保存");
+}
+
+/* ========== 点击事件 ========== */
+document.addEventListener("click",async ev=>{
+  const b=ev.target.closest("[data-act]");if(!b)return;
+  const a=b.dataset.act,id=b.dataset.id,qid=b.dataset.qid;
+  if(a==="pick"){
+    const r=resolveQ(qid);if(!r)return;const st=S.ans[qid]||(S.ans[qid]={picked:[]});if(st.done)return;
+    const L=b.dataset.l;
+    if(letters(r.q.answer).length>1){st.picked=st.picked.includes(L)?st.picked.filter(x=>x!==L):st.picked.concat([L]);rerender();}
+    else{st.picked=[L];judge(qid);}
+  }
+  else if(a==="submit"){const st=S.ans[qid];if(!st||!st.picked.length){toast("先选答案");return;}judge(qid);}
+  else if(a==="reveal"){const st=S.ans[qid]||(S.ans[qid]={picked:[]});st.revealed=true;rerender();}
+  else if(a==="self"){judge(qid,b.dataset.ok==="1");}
+  else if(a==="redo"){delete S.ans[qid];rerender();}
+  else if(a==="showImg"){S.showImg.has(id)?S.showImg.delete(id):S.showImg.add(id);rerender();}
+  else if(a==="newChat"){newChat("","");}
+  else if(a==="sendAsk"){sendAsk();}
+  else if(a==="genDrill"){genDrill();}
+  else if(a==="saveAskNote"){saveAskNote();}
+  else if(a==="dropAskImg"){S.askUi.img=null;rerender();}
+  else if(a==="delChat"){const c=curChat();if(c&&confirm("删除这次提问和它的练习题？已经收进错题库的题不受影响。")){S.chats=S.chats.filter(h=>h.id!==c.id);DB.del(c.id).catch(saveFail);S.askUi.cur="";render();}}
+  else if(a==="askAbout"){const x=S.mistakes.find(m=>m.id===id);if(x)newChat(mistakeContext(x),"这道题我没懂的地方是：");}
+  else if(a==="askTopic"){const k=b.dataset.key,mid=k.slice(0,k.indexOf("::")),t=k.slice(k.indexOf("::")+2);newChat(`知识点：${modName(mid)}｜${t}${S.topics[k]?"\n要点卡内容：\n"+S.topics[k].content.slice(0,1500):""}`,`“${t}”这里我没懂：`);}
+  else if(a==="next"){S.practice.i++;render();window.scrollTo(0,0);}
+  else if(a==="openTopic"){S.topicOpen=S.topicOpen===b.dataset.key?"":b.dataset.key;rerender();}
+  else if(a==="setStatus"){S.progress.status[b.dataset.key]=Number(b.dataset.v);saveProgress();rerender();}
+  else if(a==="genTopic"){genTopic(b.dataset.key).catch(()=>{});}
+  else if(a==="addTopic"){
+    const t=(prompt("新知识点名称")||"").trim();if(!t)return;const m=modById(b.dataset.mod);
+    if(m.topics.includes(t)){toast("已经有这个知识点了");return;}m.topics.push(t);saveProgress();rerender();
+  }
+  else if(a==="delTopic"){
+    const k=b.dataset.key,mid=k.slice(0,k.indexOf("::")),t=k.slice(k.indexOf("::")+2);
+    if(!confirm("删掉“"+t+"”这个知识点？相关错题不会删除。"))return;
+    const m=modById(mid);m.topics=m.topics.filter(x=>x!==t);delete S.progress.status[k];S.topicOpen="";saveProgress();rerender();
+  }
+  else if(a==="genModule"){
+    const mid=b.dataset.mod;if(!getKey()){toast("先去“设置”页填 DeepSeek API Key");return;}
+    const todo=allTopics(mid).map(t=>topicKey(mid,t)).filter(k=>!S.topics[k]);
+    if(!todo.length){toast("这个模块的要点都生成过了");return;}
+    if(!confirm(`会依次生成 ${todo.length} 个知识点的要点，大概要 ${Math.ceil(todo.length*0.5)} 分钟，可以先去做别的。开始吗？`))return;
+    S.modBusy=mid;rerender();
+    for(const k of todo){try{await genTopic(k);}catch(e){if(fatal(e))break;}}
+    S.modBusy="";rerender();toast("本模块要点生成完了");
+  }
+  else if(a==="practiceTopic"){const k=b.dataset.key,mid=k.slice(0,k.indexOf("::")),t=k.slice(k.indexOf("::")+2);startPracticeWith(shuffle(filterList({mod:mid,range:"all",state:"all",topic:t})),true);}
+  else if(a==="startDue"){startPracticeWith(S.mistakes.filter(isDue),false);}
+  else if(a==="practiceBank"){startPracticeWith(filterList(S.bank),true);}
+  else if(a==="startPractice"){const e=S.exp;startPracticeWith(filterList({mod:e.mod,range:e.range,state:e.scope,q:""}),e.sim);}
+  else if(a==="endPractice"){S.practice=null;render();}
+  else if(a==="toggle"){S.bank.open.has(id)?S.bank.open.delete(id):S.bank.open.add(id);rerender();}
+  else if(a==="del"){
+    if(!confirm("删除这道错题？删掉后找不回来。"))return;
+    const x=S.mistakes.find(m=>m.id===id);S.mistakes=S.mistakes.filter(m=>m.id!==id);DB.del(id).catch(saveFail);
+    if(x&&x.imageIds)x.imageIds.forEach(i=>{if(!S.mistakes.some(m=>(m.imageIds||[]).includes(i)))DB.delImg(i).catch(()=>{});});
+    rerender();
+  }
+  else if(a==="saveCat"){
+    const x=S.mistakes.find(m=>m.id===id);if(!x)return;
+    x.module=document.querySelector(`[data-edit-mod="${id}"]`).value;x.topic=document.querySelector(`[data-edit-topic="${id}"]`).value.trim();
+    saveMistake(x);rerender();toast("分类已保存");
+  }
+  else if(a==="moreSim"){moreSim(id);}
+  else if(a==="summarize"){summarize();}
+  else if(a==="delNote"){if(confirm("删除这张知识卡？")){S.notes=S.notes.filter(n=>n.id!==id);DB.del(id).catch(saveFail);render();}}
+  else if(a==="expPaper"){exportPaper("md");}
+  else if(a==="expPaperHtml"){exportPaper("html");}
+  else if(a==="expKnow"){exportKnowledge();}
+  else if(a==="saveCfg"){saveCfg();}
+  else if(a==="saveKey"){const v=$("#keyIn").value.trim();try{localStorage.setItem("ds_key",v);}catch(_){}S.testMsg=v?"已保存。可以点“测试连接”确认一下。":"已清空。";render();}
+  else if(a==="testKey"){
+    const v=$("#keyIn").value.trim();if(v){try{localStorage.setItem("ds_key",v);}catch(_){}}
+    S.testMsg="正在测试……";render();
+    try{const t=await askDeepSeek("只回复两个字：成功");S.testMsg="连接成功，DeepSeek 回复："+t.slice(0,20);}
+    catch(e){S.testMsg=e.ui||"测试失败";}
+    render();
+  }
+  else if(a==="backup"){backup();}
+  else if(a==="saveSync"){
+    try{localStorage.setItem("gh_repo",$("#ghRepo").value.trim().replace(/^https?:\/\/github\.com\//,"").replace(/\/$/,""));localStorage.setItem("gh_token",$("#ghToken").value.trim());}catch(_){}
+    render();Sync.run(true);
+  }
+  else if(a==="syncNow"){Sync.run(true);}
+  else if(a==="restore"){const fi=$("#restoreIn");fi.onchange=()=>{if(fi.files[0])restore(fi.files[0]);};fi.click();}
+});
+document.addEventListener("change",ev=>{
+  const t=ev.target,e=S.exp;
+  if(t.id==="examDate"){S.progress.examDate=t.value;saveProgress();renderHeader();}
+  else if(t.id==="fMod"){S.bank.mod=t.value;render();}
+  else if(t.id==="fRange"){S.bank.range=t.value;render();}
+  else if(t.id==="fState"){S.bank.state=t.value;render();}
+  else if(t.id==="nRange"){S.notesUi.range=t.value;render();}
+  else if(["pMod","eMod"].includes(t.id)){e.mod=t.value;render();}
+  else if(["pRange","eRange"].includes(t.id)){e.range=t.value;render();}
+  else if(["pScope","eScope"].includes(t.id)){e.scope=t.value;render();}
+  else if(["pSim","eSim"].includes(t.id)){e.sim=t.checked;render();}
+  else if(t.id==="pTimer"){e.timer=t.checked;}
+  else if(t.id==="askHist"){if(t.value){S.askUi.cur=t.value;S.askUi.input="";S.askUi.img=null;render();}}
+});
+let qTimer=null;
+document.addEventListener("input",ev=>{
+  if(ev.target.id==="fQ"){S.bank.q=ev.target.value;clearTimeout(qTimer);qTimer=setTimeout(()=>{const pos=ev.target.selectionStart;render();const el=$("#fQ");if(el){el.focus();el.setSelectionRange(pos,pos);}},350);}
+  if(ev.target.id==="capNote"){S.capture.note=ev.target.value;}
+  if(ev.target.id==="askIn"){S.askUi.input=ev.target.value;}
+});
+
+/* ========== 收错题：选图、拖拽、粘贴 ========== */
+function bindCapture(){
+  const fi=$("#fileIn");
+  $("#pick").onclick=()=>fi.click();
+  fi.onchange=()=>{addFiles(fi.files);fi.value="";};
+  $("#runCap").onclick=runCapture;
+  drawThumbs();
+}
+function addFiles(list){
+  const imgs=Array.from(list||[]).filter(f=>f&&f.type&&f.type.startsWith("image/"));
+  if(!imgs.length){toast("没有找到图片。从微信拖不进来的话，在微信里右键图片“复制”，再回这里按 Ctrl＋V");return false;}
+  S.capture.files=S.capture.files.concat(imgs);drawThumbs();toast(`已加入 ${imgs.length} 张，共 ${S.capture.files.length} 张待识别`);return true;
+}
+document.addEventListener("dragover",e=>{e.preventDefault();const d=$("#drop");if(d)d.classList.add("over");});
+document.addEventListener("dragleave",e=>{if(!e.relatedTarget){const d=$("#drop");if(d)d.classList.remove("over");}});
+document.addEventListener("drop",e=>{
+  e.preventDefault();const d=$("#drop");if(d)d.classList.remove("over");
+  if(S.capture.busy)return;
+  const files=e.dataTransfer&&e.dataTransfer.files?Array.from(e.dataTransfer.files):[];
+  if(!files.length)return;
+  if(current()==="ask"){const f=files.find(f=>f.type&&f.type.startsWith("image/"));if(f){S.askUi.img=f;rerender();}return;}
+  if(current()!=="capture"){location.hash="#capture";setTimeout(()=>addFiles(files),50);}else addFiles(files);
+});
+document.addEventListener("paste",e=>{
+  const items=Array.from((e.clipboardData&&e.clipboardData.items)||[]).filter(i=>i.kind==="file"&&i.type.startsWith("image/")).map(i=>i.getAsFile()).filter(Boolean);
+  if(!items.length)return;
+  e.preventDefault();
+  if(current()==="ask"){S.askUi.img=items[0];rerender();return;}
+  if(S.capture.busy)return;
+  const named=items.map((f,i)=>new File([f],`粘贴_${Date.now()}_${i}.png`,{type:f.type}));
+  if(current()!=="capture"){location.hash="#capture";setTimeout(()=>addFiles(named),50);}else addFiles(named);
+});
+function drawThumbs(){
+  const t=$("#thumbs");if(!t)return;t.innerHTML="";
+  S.capture.files.forEach((f,i)=>{const w=document.createElement("span");w.className="thumb";const img=document.createElement("img");img.alt="待识别";img.src=URL.createObjectURL(f);const x=document.createElement("button");x.textContent="×";x.title="移除这张";x.onclick=()=>{S.capture.files.splice(i,1);drawThumbs();};w.appendChild(img);w.appendChild(x);t.appendChild(w);});
+  const d=$("#drop");if(d)d.classList.toggle("has",S.capture.files.length>0);
+}
+async function shrink(file){
+  try{
+    const bmp=await createImageBitmap(file);const max=1600;const r=Math.min(1,max/Math.max(bmp.width,bmp.height));
+    const c=document.createElement("canvas");c.width=Math.round(bmp.width*r);c.height=Math.round(bmp.height*r);
+    c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
+    return await new Promise(res=>c.toBlob(b=>res(b||file),"image/jpeg",0.85));
+  }catch(e){return file;}
+}
+function moduleListText(){return mods().map(m=>`${m.id}（${m.name}）：${m.topics.join("、")}`).join("\n");}
+function capLog(s){S.capture.log=s;const el=$("#capLog");if(el)el.textContent=s;}
+const SIM_RULE="similar：2道同知识点、同难度的原创题，每道含 question、options、answer、analysis；选择题的 answer 只写选项字母（多选就写多个字母，如 AC），options 每项以“A. ”这种形式开头；图片类题目无法出图时，改成用文字描述图形的规律辨析题";
+
+async function runCapture(){
+  const c=S.capture;
+  if(!c.files.length){toast("先放一张错题图片");return;}
+  if(!getKey()){toast("先去“设置”页填 DeepSeek API Key");return;}
+  c.busy=true;render();
+  let saved=0;const total=c.files.length;const logs=[];
+  for(let i=0;i<total;i++){
+    capLog(logs.concat([`正在识别第 ${i+1}／${total} 张，每张大约要半分钟……`]).join("\n"));
+    try{
+      const blob=await shrink(c.files[i]);
+      const dataURL=await blobToDataURL(blob);
+      const prompt=`你是${exam()}笔试的辅导老师。考生情况：${S.progress.about||"无"}
+图片是考生做错的题目的截图或照片。
+${c.note?"考生补充说明："+c.note+"\n":""}请识别图中题目：如果考生说明里指定了题号，只处理那几道；否则处理图中所有完整的题目。
+对每道题输出一个对象，字段如下：
+module：从下面模块清单的英文代号里选一个
+topic：从该模块的知识点里选最贴切的一个，原样照抄；实在没有合适的，写一个简短的新知识点名
+question：题干原文。资料分析类题写设问，并用两三句话写出解题必需的材料数据；图形类题用文字描述每个图形的关键特征
+options：选项数组，每项以“A. ”这种形式开头；没有选项就给空数组
+answer：正确答案；选择题只写选项字母（多选写多个字母，如 AC）。图片里有答案就照图片，没有就自己仔细解出来
+myAnswer：考生选的答案字母，看不出就给空字符串
+analysis：解析，200字以内；计算题写最快的估算路径，不要硬算
+knowledge：考的知识点或规律，一句话
+method：可以反复套用的解题方法或口诀，一两句
+trap：最常见的错因，一句话
+${SIM_RULE}
+模块清单：
+${moduleListText()}
+只输出一个 JSON 对象，不要任何其他文字，格式：{"items":[ ... ]}`;
+      const raw=await askDeepSeek(prompt,dataURL);
+      let res;try{res=parseJSON(raw);}catch(_){throw Object.assign(new Error("parse"),{ui:"DeepSeek 返回的格式不对，再试一次。"});}
+      const items=Array.isArray(res.items)?res.items:[];
+      if(!items.length){logs.push(`第 ${i+1} 张：没识别出题目，换一张更清楚的图试试。`);continue;}
+      const imgId=newId("img");await DB.putImg(imgId,blob);
+      for(const it of items){
+        const doc={id:newId("m"),kind:"mistake",createdAt:Date.now(),module:modById(it.module)?it.module:"misc",topic:String(it.topic||"").slice(0,40),
+          question:String(it.question||""),options:Array.isArray(it.options)?it.options.map(String):[],
+          answer:String(it.answer||""),myAnswer:String(it.myAnswer||""),analysis:String(it.analysis||""),
+          knowledge:String(it.knowledge||""),method:String(it.method||""),trap:String(it.trap||""),reason:c.note||"",
+          similar:Array.isArray(it.similar)?it.similar.slice(0,3).map(cleanQ):[],
+          imageIds:[imgId],mastered:false,streak:0,stats:{right:0,wrong:0},review:{stage:0,next:startOfToday()+DAY}};
+        await DB.put(doc);S.mistakes.unshift(doc);saved++;
+      }
+      logs.push(`第 ${i+1} 张：存入 ${items.length} 道。`);
+    }catch(e){
+      console.error(e);logs.push(`第 ${i+1} 张：${e.ui||"识别失败，可以再试一次。"}`);
+      if(fatal(e))break;
+    }
+  }
+  c.busy=false;c.files=[];c.note="";
+  S.capture.log=logs.join("\n")+(saved?`\n一共存入 ${saved} 道错题，明天会出现在“今天该复习”里。`:"");
+  render();
+}
+async function moreSim(id){
+  const x=S.mistakes.find(m=>m.id===id);if(!x)return;
+  S.simBusy.add(id);rerender();
+  try{
+    const prompt=`你是${exam()}笔试的辅导老师。下面是考生做错的一道题，请再出 2 道同知识点、同难度、但和已有同类题不重复的原创题。
+原题：${x.question}
+选项：${(x.options||[]).join("　")}
+答案：${x.answer}
+知识点：${x.topic}，${x.knowledge}
+已有同类题：${(x.similar||[]).map(s=>s.question.slice(0,60)).join("｜")||"无"}
+${SIM_RULE}
+只输出一个 JSON 对象，不要任何其他文字，格式：{"similar":[ ... ]}`;
+    const res=parseJSON(await askDeepSeek(prompt));
+    const add=(Array.isArray(res.similar)?res.similar:[]).slice(0,3).map(cleanQ).filter(s=>s.question);
+    if(!add.length)throw Object.assign(new Error("empty"),{ui:"没出成功，再试一次。"});
+    x.similar=(x.similar||[]).concat(add);saveMistake(x);toast(`加了 ${add.length} 道同类题`);
+  }catch(e){console.error(e);toast(e.ui||"出题失败，再试一次");}
+  S.simBusy.delete(id);rerender();
+}
+
+/* ========== 整理知识卡 ========== */
+async function summarize(){
+  const u=S.notesUi;
+  const list=S.mistakes.filter(x=>inRange(x.createdAt,u.range));if(!list.length)return;
+  const data=list.slice(0,80).map(x=>({模块:modName(x.module),知识点:x.topic,题干:String(x.question).slice(0,160),正确答案:x.answer,我的答案:x.myAnswer,方法:x.method,易错:x.trap,说明:x.reason,做错次数:(x.stats||{}).wrong||0}));
+  const prompt=`下面是一位${exam()}考生${RANGE_TXT[u.range]}做错的题目记录（JSON）。考生情况：${S.progress.about||"无"}
+请把它整理成一份可背诵的复习卡，用 Markdown，中文全角标点，不要寒暄：
+## 按知识点归纳
+每个知识点一个三级标题，下面写：核心规律或公式（能背的版本）、这几道题我错在哪、一句话提醒
+## 高频错因
+## 明天先复习
+只根据记录写，不要编造考生没做过的题。
+记录：
+${JSON.stringify(data)}`;
+  u.busy=true;render();
+  try{
+    const content=await askDeepSeek(prompt);
+    const d=new Date();
+    const doc={id:newId("n"),kind:"note",createdAt:Date.now(),title:`${d.getMonth()+1}月${d.getDate()}日整理：${RANGE_TXT[u.range]}错题`,rangeLabel:RANGE_TXT[u.range]+" "+list.length+" 道",content};
+    await DB.put(doc);S.notes.unshift(doc);toast("已存进知识库");
+  }catch(e){console.error(e);toast(e.ui||"整理失败，可以再试一次");}
+  u.busy=false;render();
+}
+
+/* ========== 导出与备份 ========== */
+function saveFile(filename,data,mime){
+  const blob=data instanceof Blob?data:new Blob([data],{type:mime});
+  const url=URL.createObjectURL(blob);const a=document.createElement("a");
+  a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);
+}
+function paperItems(){
+  const e=S.exp;const list=filterList({mod:e.mod,range:e.range,state:e.scope,q:""});
+  const items=[];list.forEach(x=>{items.push({x,q:x,src:"原题"});if(e.sim)(x.similar||[]).forEach(s=>{if(!s.added)items.push({x,q:s,src:"同类题"});});});
+  return shuffle(items);
+}
+function exportPaper(kind){
+  const items=paperItems();if(!items.length)return;
+  const d=new Date(),stamp=dayKey(d);
+  const title=`${exam()}错题重练卷（${d.getMonth()+1}月${d.getDate()}日，${items.length}题）`;
+  if(kind==="md"){
+    let s=`# ${title}\n\n`;
+    items.forEach((it,i)=>{s+=`**${i+1}.**【${modName(it.x.module)}・${it.x.topic||""}】${it.src==="原题"&&(it.x.imageIds||[]).length&&it.x.module==="panduan"?"（原题有图）":""}\n\n${it.q.question}\n\n${(it.q.options||[]).join("\n")}\n\n`;});
+    s+=`---\n\n# 答案与解析\n\n`;
+    items.forEach((it,i)=>{s+=`**${i+1}.** 答案：${it.q.answer}\n${it.q.analysis||""}${it.src==="原题"&&it.x.method?`\n方法：${it.x.method}`:""}\n\n`;});
+    saveFile(`错题重练卷_${stamp}.md`,s,"text/markdown");
+  }else{
+    const qs=items.map((it,i)=>`<div class="q"><p><b>${i+1}.</b> <small>【${esc(modName(it.x.module))}・${esc(it.x.topic||"")}】</small></p><p>${esc(it.q.question).replace(/\n/g,"<br>")}</p>${(it.q.options||[]).map(o=>`<p>${esc(o)}</p>`).join("")}</div>`).join("");
+    const as=items.map((it,i)=>`<p><b>${i+1}.</b> 答案：${esc(it.q.answer)}　${esc(it.q.analysis||"")}</p>`).join("");
+    const html=`<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;margin:24px auto;padding:0 16px;line-height:1.7;color:#222}h1{font-size:22px}.q{margin-bottom:18px;page-break-inside:avoid}small{color:#777}.ak{page-break-before:always}</style></head><body><h1>${esc(title)}</h1>${qs}<div class="ak"><h1>答案与解析</h1>${as}</div></body></html>`;
+    saveFile(`错题重练卷_${stamp}.html`,html,"text/html");
+  }
+}
+function exportKnowledge(){
+  const e=S.exp;const d=new Date();
+  let s=`# ${exam()}知识库（导出于 ${d.getMonth()+1}月${d.getDate()}日）\n\n`;
+  const tkeys=mods().filter(m=>e.mod==="all"||m.id===e.mod).flatMap(m=>m.topics.map(t=>topicKey(m.id,t))).filter(k=>S.topics[k]);
+  if(tkeys.length){s+=`## 知识点要点\n\n`;tkeys.forEach(k=>{const mid=k.slice(0,k.indexOf("::"));s+=`### ${modName(mid)}｜${k.slice(k.indexOf("::")+2)}\n\n${S.topics[k].content}\n\n`;});}
+  const notes=S.notes.filter(n=>inRange(n.createdAt,e.range));
+  if(notes.length){s+=`## 错题整理卡\n\n`;notes.forEach(n=>{s+=`### ${n.title}\n\n${n.content}\n\n`;});}
+  const list=filterList({mod:e.mod,range:e.range,state:e.scope,q:""});
+  const groups={};list.forEach(x=>{const k=modName(x.module)+"｜"+(x.topic||"其他");(groups[k]=groups[k]||[]).push(x);});
+  const keys=Object.keys(groups).sort();
+  if(keys.length){s+=`## 按知识点的方法与易错点\n\n`;keys.forEach(k=>{s+=`### ${k}\n\n`;const seen=new Set();groups[k].forEach(x=>{[["规律",x.knowledge],["方法",x.method],["易错",x.trap]].forEach(([l,v])=>{if(v&&!seen.has(v)){seen.add(v);s+=`- ${l}：${v}\n`;}});});s+="\n";});}
+  if(!tkeys.length&&!notes.length&&!keys.length){toast("这个范围里还没有内容");return;}
+  saveFile(`知识库_${dayKey(d)}.md`,s,"text/markdown");
+}
+async function backup(){
+  const images={};
+  for(const c of S.chats){for(const m of c.messages){if(m.imageId&&!images[m.imageId]){try{const b=await DB.getImg(m.imageId);if(b)images[m.imageId]=await blobToDataURL(b);}catch(_){}}}}
+  for(const x of S.mistakes){for(const id of (x.imageIds||[])){if(!images[id]){try{const b=await DB.getImg(id);if(b)images[id]=await blobToDataURL(b);}catch(_){}}}}
+  const data={app:"beikao",version:2,exportedAt:Date.now(),progress:S.progress,items:S.mistakes.concat(S.notes,Object.values(S.topics),S.chats),images};
+  saveFile(`${exam()}备考工作台备份_${dayKey(Date.now())}.json`,JSON.stringify(data),"application/json");
+}
+async function restore(file){
+  try{
+    const data=JSON.parse(await file.text());
+    if(data.app!=="beikao"){toast("这不是备考工作台的备份文件");return;}
+    if(!confirm("恢复会用备份里的内容替换现在的全部数据，确定吗？"))return;
+    await DB.clear();
+    for(const it of data.items||[])await DB.put(it);
+    for(const [id,url] of Object.entries(data.images||{})){const b=await (await fetch(url)).blob();await DB.putImg(id,b);}
+    const p=Object.assign({},data.progress||{});p.id="progress";p.kind="progress";await DB.put(p);
+    await load();toast("恢复完成");
+  }catch(e){console.error(e);toast("恢复失败：备份文件可能损坏");}
+}
+
+/* ========== 启动 ========== */
+async function load(fromSync){
+  const all=await DB.all();
+  S.mistakes=all.filter(x=>x.kind==="mistake").sort((a,b)=>b.createdAt-a.createdAt);
+  S.notes=all.filter(x=>x.kind==="note").sort((a,b)=>b.createdAt-a.createdAt);
+  S.chats=all.filter(x=>x.kind==="chat").sort((a,b)=>b.createdAt-a.createdAt);
+  S.topics={};all.filter(x=>x.kind==="topic").forEach(x=>{S.topics[x.key]=x;});
+  const p=all.find(x=>x.id==="progress")||{};
+  let modules=p.modules;
+  if(!Array.isArray(modules)||!modules.length){
+    modules=JSON.parse(JSON.stringify(DEFAULT_MODULES));
+    const custom=p.custom||{};modules.forEach(m=>{(custom[m.id]||[]).forEach(t=>{if(!m.topics.includes(t))m.topics.push(t);});});
+  }
+  S.progress={status:p.status||{},modules,examName:p.examName||DEFAULT_EXAM,about:p.about!=null?p.about:DEFAULT_ABOUT,examDate:p.examDate||"",daily:p.daily||{}};
+  if(!p.modules)saveProgress();
+  S.ready=true;
+  if(fromSync&&document.activeElement&&["askIn","capNote","fQ"].includes(document.activeElement.id)){renderHeader();return;}
+  render();
+}
+setTabs();render();
+DB.open().then(()=>load()).then(()=>{Sync.setStatus(Sync.status);if(Sync.on())Sync.run();}).catch(e=>{console.error(e);S.err="浏览器不允许本地存储（可能开了无痕模式），数据没法保存。请用普通窗口打开。";S.ready=true;render();});
+})();
+</script>
+</body>
+</html>
