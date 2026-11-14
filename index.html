@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4A5E36">
+<link rel="icon" href="icon-192.png">
 <title>军队文职备考工作台</title>
 <style>
 :root{
@@ -40,7 +43,8 @@ img{max-width:100%}
 
 header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
 .top-inner{max-width:880px;margin:0 auto;padding:14px 18px 0}
-.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:4px 12px;flex-wrap:wrap}
+.count{white-space:nowrap}
 .brand h1{font-size:20px}
 .count{font-size:14px;color:var(--muted);white-space:nowrap}
 .count b{font-family:"Noto Serif SC",serif;font-size:22px;color:var(--red);font-weight:800;margin:0 2px}
@@ -159,6 +163,17 @@ details summary{cursor:pointer;color:var(--olive);font-size:14px;margin-top:6px}
 .msg img{max-height:220px;border-radius:6px;display:block;margin-top:6px}
 .ctx{font-size:14px;background:var(--bg);border:1px dashed var(--line);border-radius:8px;padding:8px 12px;margin-bottom:10px;white-space:pre-wrap;max-height:9em;overflow:auto}
 .drillq{border-top:1px solid var(--line);padding:12px 0}
+.datenav{display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none;position:sticky;top:calc(env(safe-area-inset-top,0px) + 92px);background:var(--bg);z-index:3}
+.datenav::-webkit-scrollbar{display:none}
+.datenav button{flex:none}
+details.day{border:1px solid var(--line);border-radius:10px;background:var(--surface);margin-bottom:10px}
+details.day>summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;justify-content:space-between;gap:10px;font-weight:600}
+details.day>summary::-webkit-details-marker{display:none}
+details.day>summary::after{content:"展开";font-weight:400;color:var(--muted);font-size:14px}
+details.day[open]>summary::after{content:"收起"}
+details.day>summary .sub{font-weight:400;color:var(--muted);font-size:14px;margin-left:auto}
+details.day .daybody{padding:0 12px 4px}
+.card.last{box-shadow:0 0 0 2px var(--amber)}
 .empty{padding:28px 10px;text-align:center;color:var(--muted)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;z-index:20;max-width:90vw}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:30;padding:16px}
@@ -179,6 +194,7 @@ details summary{cursor:pointer;color:var(--olive);font-size:14px;margin-top:6px}
       <a href="#capture">收错题</a>
       <a href="#bank">错题库</a>
       <a href="#ask">答疑</a>
+      <a href="#recite">背诵</a>
       <a href="#notes">知识库</a>
       <a href="#practice">练习</a>
       <a href="#export">导出</a>
@@ -213,7 +229,7 @@ const S = {
   ready:false, err:"",
   progress:{status:{}, modules:[], examName:DEFAULT_EXAM, about:DEFAULT_ABOUT, examDate:"", daily:{}},
   mistakes:[], notes:[], topics:{},
-  ans:{}, chats:[], showImg:new Set(),
+  ans:{}, chats:[], decks:[], deckProg:{}, rec:null, recList:"", recEdit:null, recGenBusy:false, capOpen:new Set(), capOpenInit:false, showImg:new Set(),
   askUi:{cur:"", input:"", img:null, busy:false, drillBusy:false},
   capture:{files:[], busy:false, log:"", note:""},
   bank:{mod:"all", range:"all", state:"open", q:"", open:new Set()},
@@ -283,7 +299,22 @@ const DB={
   clear(){return Promise.all([DB.req("items","readwrite",s=>s.clear()),DB.req("images","readwrite",s=>s.clear())]);}
 };
 function saveFail(e){console.error(e);toast("保存失败：浏览器存储可能已满，先去“设置”导出备份");}
-function saveProgress(){const b=JSON.parse(JSON.stringify(S.progress));b.id="progress";b.kind="progress";DB.put(b).catch(saveFail);}
+function saveProgress(fresh){const b=JSON.parse(JSON.stringify(S.progress));b.id="progress";b.kind="progress";if(fresh)b.fresh=true;DB.put(b).catch(saveFail);}
+function mergeProgress(a,b){
+  let base,other;
+  if(a.fresh&&!b.fresh){base=b;other=a;}else if(b.fresh&&!a.fresh){base=a;other=b;}
+  else{base=(a.updatedAt||0)>=(b.updatedAt||0)?a:b;other=base===a?b:a;}
+  const m=JSON.parse(JSON.stringify(base));
+  m.status=Object.assign({},other.status||{},base.status||{});
+  const daily=Object.assign({},other.daily||{});
+  Object.entries(base.daily||{}).forEach(([k,v])=>{const o=daily[k];daily[k]=o?{done:Math.max(o.done||0,v.done||0),right:Math.max(o.right||0,v.right||0)}:v;});
+  m.daily=daily;
+  if(!m.examDate)m.examDate=other.examDate||"";
+  if(!(a.fresh&&b.fresh))delete m.fresh;
+  m.updatedAt=Math.max(a.updatedAt||0,b.updatedAt||0);
+  return m;
+}
+const stripTs=x=>{const c=Object.assign({},x);delete c.updatedAt;return JSON.stringify(c,Object.keys(c).sort());};
 function saveMistake(x){DB.put(x).catch(saveFail);}
 
 const imgCache={};
@@ -333,7 +364,13 @@ const Sync={
       let pulled=0,pushNeeded=false;const merged=[];
       for(const id of new Set([...L.keys(),...R.keys()])){
         const a=L.get(id),b=R.get(id);
-        if(a&&b){
+        if(a&&b&&id==="progress"&&a.kind==="progress"&&b.kind==="progress"){
+          const m=mergeProgress(a,b);
+          if(stripTs(m)!==stripTs(a)){await DB.putRaw(m);pulled++;}
+          if(stripTs(m)!==stripTs(b))pushNeeded=true;
+          merged.push(m);
+        }
+        else if(a&&b){
           const ta=a.updatedAt||0,tb=b.updatedAt||0;
           if(tb>ta){await DB.putRaw(b);pulled++;merged.push(b);}
           else{merged.push(a);if(ta>tb)pushNeeded=true;}
@@ -487,15 +524,16 @@ function judge(qid,ok){
     if(!r.q.added){r.q.added=true;saveMistake(r.x);simToMistake(r.x,r.q);st.note="这道同类题已收进错题库。";}
     else st.note="这道题之前已经收进错题库了。";
   }
+  if(current()==="capture"&&r.kind!=="drill")setLast(r.x.id);
   if(S.practice&&current()==="practice"){const p=S.practice;ok?p.right++:p.wrong++;}
   rerender();
 }
 
 /* ========== 路由与渲染 ========== */
-const VIEWS=["home","capture","bank","ask","notes","practice","export","settings"];
+const VIEWS=["home","capture","bank","ask","recite","notes","practice","export","settings"];
 function current(){const h=location.hash.replace("#","");return VIEWS.includes(h)?h:"home";}
 function setTabs(){const c=current();document.querySelectorAll("#tabs a").forEach(a=>{if(a.getAttribute("href")==="#"+c)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current");});}
-window.addEventListener("hashchange",()=>{setTabs();render();window.scrollTo(0,0);});
+window.addEventListener("hashchange",()=>{setTabs();render();window.scrollTo(0,0);if(current()==="capture"&&lastId())setTimeout(goLast,120);});
 
 function banner(){
   if(S.err)return `<div class="banner">${esc(S.err)}</div>`;
@@ -513,7 +551,7 @@ function render(){
   renderHeader();
   const v=current(),root=$("#view");
   if(!S.ready){root.innerHTML=banner()+`<p class="hint">正在加载……</p>`;return;}
-  const map={home:viewHome,capture:viewCapture,bank:viewBank,ask:viewAsk,notes:viewNotes,practice:viewPractice,export:viewExport,settings:viewSettings};
+  const map={home:viewHome,capture:viewCapture,bank:viewBank,ask:viewAsk,recite:viewRecite,notes:viewNotes,practice:viewPractice,export:viewExport,settings:viewSettings};
   root.innerHTML=banner()+map[v]();
   if(v==="capture")bindCapture();
   hydrateImages();
@@ -552,7 +590,9 @@ function viewHome(){
   });
   return `<section class="section"><div class="panel">
       <div class="stats">
+        ${S.progress.examDate?`<div class="stat red"><div class="n">${Math.max(0,Math.ceil((new Date(S.progress.examDate+"T00:00:00").getTime()-startOfToday())/DAY))}</div><div class="l">距考试天数</div></div>`:""}
         <div class="stat red"><div class="n">${due}</div><div class="l">今天该复习</div></div>
+        <div class="stat"><div class="n">${totalDue()}</div><div class="l"><a href="#recite" style="color:inherit">今天该背的卡</a></div></div>
         <div class="stat"><div class="n">${td.done}</div><div class="l">今天做题${td.done?`，对 ${Math.round(td.right/td.done*100)}%`:""}</div></div>
         <div class="stat"><div class="n">${streakDays()}</div><div class="l">连续打卡天数</div></div>
         <div class="stat"><div class="n">${open}</div><div class="l">错题没掌握</div></div>
@@ -698,8 +738,247 @@ function saveAskNote(){
 }
 function mistakeContext(x){return `题目：${x.question}\n${(x.options||[]).join("\n")}\n正确答案：${x.answer}${x.myAnswer?"　我当时选：" +x.myAnswer:""}\n原解析：${x.analysis||"无"}`;}
 
+/* ---------- 背诵与默写 ---------- */
+function bhfCards(){
+  const pairs=[[2,50],[3,33.3],[4,25],[5,20],[6,16.7],[7,14.3],[8,12.5],[9,11.1],[10,10],[11,9.1],[12,8.3],[13,7.7],[14,7.1],[15,6.7],[16,6.25],[17,5.9],[18,5.6],[19,5.3],[20,5]];
+  const exactSet=new Set([2,4,5,8,10,16,20]);
+  const out=[];
+  pairs.forEach(([n,p])=>{
+    const approx=exactSet.has(n)?"":"约 ";
+    out.push({id:"f"+n,front:`1/${n} ＝ ？%`,back:`${approx}${p}%`,num:100/n,tol:0.16});
+    out.push({id:"r"+n,front:`${p}% ${exactSet.has(n)?"＝":"≈"} 1/？`,back:`1/${n}`,num:n,tol:0});
+  });
+  [["2/3","约 66.7%",200/3],["3/4","75%",75],["2/7","约 28.6%",200/7],["3/7","约 42.9%",300/7],["3/8","37.5%",37.5],["5/8","62.5%",62.5],["4/9","约 44.4%",400/9]].forEach(([f,b,v],i)=>out.push({id:"x"+i,front:`${f} ＝ ？%`,back:b,num:v,tol:0.16}));
+  return out;
+}
+const BUILTIN_DECKS=[
+  {id:"bhf",name:"百化分",speed:true,cards:bhfCards()},
+  {id:"zlfx",name:"资料分析公式",cards:[
+    {id:"z1",front:"基期量 ＝ ？",back:"现期量 ÷（1＋增长率）"},
+    {id:"z2",front:"增长量 ＝ ？（用现期和增长率表示）",back:"现期量 ÷（1＋增长率）× 增长率"},
+    {id:"z3",front:"增长率 ＝ ？",back:"增长量 ÷ 基期量 ＝（现期－基期）÷ 基期"},
+    {id:"z4",front:"增长率是 1/n 时，增长量 ＝ ？",back:"现期 ÷（n＋1）；如果是下降 1/n，减少量 ＝ 现期 ÷（n－1）"},
+    {id:"z5",front:"比重 ＝ ？",back:"部分 ÷ 整体"},
+    {id:"z6",front:"基期比重 ＝ ？（部分现期 A、增速 a；整体现期 B、增速 b）",back:"（A ÷ B）×（1＋b）÷（1＋a）"},
+    {id:"z7",front:"两期比重是升还是降，怎么判断？",back:"部分增速 a 大于整体增速 b，比重上升；小于则下降；相等不变"},
+    {id:"z8",front:"两期比重差 ＝ ？",back:"（A ÷ B）×（a－b）÷（1＋a）"},
+    {id:"z9",front:"平均数 ＝ ？",back:"总量 ÷ 个数"},
+    {id:"z10",front:"平均数的增长率 ＝ ？（总量增速 a，个数增速 b）",back:"（a－b）÷（1＋b）"},
+    {id:"z11",front:"基期倍数 ＝ ？",back:"（A ÷ B）×（1＋b）÷（1＋a）"},
+    {id:"z12",front:"间隔增长率 ＝ ？（两年增速 r1、r2）",back:"r1＋r2＋r1×r2"},
+    {id:"z13",front:"年均增长率 ＝ ？",back:"（末期 ÷ 初期）开 n 次方 － 1"},
+    {id:"z14",front:"混合增长率在哪个范围？",back:"介于两部分增速之间，偏向基期量较大的那一部分"},
+    {id:"z15",front:"拉动增长率 ＝ ？",back:"部分增长量 ÷ 整体基期量"},
+    {id:"z16",front:"增长贡献率 ＝ ？",back:"部分增长量 ÷ 整体增长量"}]},
+  {id:"slgx",name:"数量关系公式",cards:[
+    {id:"s1",front:"工程问题的基本公式",back:"工作总量 ＝ 效率 × 时间；常把总量设成各时间的最小公倍数"},
+    {id:"s2",front:"相遇问题",back:"路程和 ＝ 速度和 × 相遇时间"},
+    {id:"s3",front:"追及问题",back:"路程差 ＝ 速度差 × 追及时间"},
+    {id:"s4",front:"等距离平均速度 ＝ ？",back:"2 × v1 × v2 ÷（v1＋v2）"},
+    {id:"s5",front:"利润率 ＝ ？",back:"利润 ÷ 成本（利润 ＝ 售价－成本）"},
+    {id:"s6",front:"售价 ＝ ？（用成本和利润率表示）",back:"成本 ×（1＋利润率）"},
+    {id:"s7",front:"排列数 A(n,m) ＝ ？",back:"n！÷（n－m）！，和顺序有关"},
+    {id:"s8",front:"组合数 C(n,m) ＝ ？",back:"n！÷［m！×（n－m）！］，和顺序无关"},
+    {id:"s9",front:"什么时候相加，什么时候相乘？",back:"分类用加法，分步用乘法"},
+    {id:"s10",front:"两集合容斥公式",back:"A＋B－A∩B ＝ 总数－两者都不"},
+    {id:"s11",front:"植树问题：两端都种",back:"棵数 ＝ 段数＋1；环形 棵数 ＝ 段数；两端都不种 棵数 ＝ 段数－1"},
+    {id:"s12",front:"概率 ＝ ？",back:"满足条件的情况数 ÷ 总情况数"}]},
+  {id:"ljfy",name:"逻辑翻译规则",cards:[
+    {id:"l1",front:"“如果 A，那么 B”怎么翻译？",back:"A → B"},
+    {id:"l2",front:"A → B 能推出什么？",back:"非 B → 非 A（逆否）；不能推出 B → A，也不能推出 非 A → 非 B"},
+    {id:"l3",front:"“只有 A，才 B”怎么翻译？",back:"B → A"},
+    {id:"l4",front:"“A 是 B 的必要条件”怎么翻译？",back:"B → A"},
+    {id:"l5",front:"“A 是 B 的充分条件”怎么翻译？",back:"A → B"},
+    {id:"l6",front:"“除非 A，否则 B”怎么翻译？",back:"非 A → B"},
+    {id:"l7",front:"“A 或 B”能推出什么？",back:"非 A → B；非 B → A（否定一个，肯定另一个）"},
+    {id:"l8",front:"“并非（A 且 B）”等于？",back:"非 A 或 非 B"},
+    {id:"l9",front:"“并非（A 或 B）”等于？",back:"非 A 且 非 B"},
+    {id:"l10",front:"“所有 S 都是 P”的矛盾是？",back:"有的 S 不是 P"},
+    {id:"l11",front:"“有的 S 是 P”的矛盾是？",back:"所有 S 都不是 P"},
+    {id:"l12",front:"真假推理第一步做什么？",back:"先找两句互相矛盾的话，它们一定一真一假"}]},
+  {id:"tutui",name:"图推规律清单",cards:[
+    {id:"t1",front:"图推排查顺序",back:"位置 → 样式 → 数量 → 属性"},
+    {id:"t2",front:"位置规律有哪些？",back:"平移、旋转、翻转"},
+    {id:"t3",front:"样式规律有哪些？",back:"叠加（直接叠加、去同存异、去异存同）、遍历"},
+    {id:"t4",front:"数量规律数什么？",back:"点、线、面、角、素（元素）、笔画"},
+    {id:"t5",front:"怎么判断能不能一笔画？",back:"奇点（连着奇数条线的点）是 0 个或 2 个，就能一笔画"},
+    {id:"t6",front:"笔画数 ＝ ？",back:"奇点数 ÷ 2（奇点为 0 时是 1 笔）"},
+    {id:"t7",front:"属性规律有哪些？",back:"对称性、曲直性、开闭性"},
+    {id:"t8",front:"空间重构：相对面有什么特点？",back:"展开图里相对的两个面不相邻，折起来后不会同时出现"}]}
+];
+const BOX_DAYS=[0,1,2,4,7,15];
+function allDecks(){return BUILTIN_DECKS.concat(S.decks||[]);}
+function deckById(id){return allDecks().find(d=>d.id===id);}
+function prog(id){return S.deckProg[id]||(S.deckProg[id]={id:"dp::"+id,kind:"deckprog",deck:id,cards:{},best:null});}
+function saveProg(id){DB.put(prog(id)).catch(saveFail);}
+function cardDue(dp,c){const p=dp.cards[c.id];return !p||p.next<=Date.now();}
+function deckDue(d){const dp=prog(d.id);return d.cards.filter(c=>dp.cards[c.id]&&cardDue(dp,c)).length;}
+function deckNew(d){const dp=prog(d.id);return d.cards.filter(c=>!dp.cards[c.id]).length;}
+function deckLearned(d){const dp=prog(d.id);return d.cards.filter(c=>(dp.cards[c.id]||{}).box>=3).length;}
+function totalDue(){return allDecks().reduce((n,d)=>n+deckDue(d),0);}
+function grade(deckId,cardId,level){
+  const dp=prog(deckId);const p=dp.cards[cardId]||{box:0,next:0,r:0,w:0};
+  if(level===2){p.box=Math.min(p.box+1,BOX_DAYS.length-1);p.r++;}
+  else if(level===1){p.box=Math.max(p.box,1);}
+  else{p.box=0;p.w++;}
+  p.next=startOfToday()+BOX_DAYS[p.box]*DAY+(p.box===0?0:0);
+  dp.cards[cardId]=p;saveProg(deckId);
+}
+function norm(s){return String(s||"").replace(/[\uff10-\uff19]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[％]/g,"%").replace(/[×]/g,"*").replace(/[÷]/g,"/").replace(/[（]/g,"(").replace(/[）]/g,")").replace(/[－—–]/g,"-").replace(/[＝]/g,"=").replace(/[＋]/g,"+").replace(/\s+/g,"").toLowerCase();}
+function numCheck(card,input){
+  const m=norm(input).replace(/^1\//,"").match(/-?\d+(\.\d+)?/);if(!m)return false;
+  return Math.abs(parseFloat(m[0])-card.num)<=card.tol+1e-9;
+}
+
+function viewRecite(){
+  const r=S.rec;
+  if(r)return viewRecSession();
+  const td=totalDue();
+  const decks=allDecks().map(d=>{
+    const due=deckDue(d),nw=deckNew(d),lr=deckLearned(d),best=prog(d.id).best;
+    const custom=!BUILTIN_DECKS.includes(d);
+    return `<div class="panel" style="margin-bottom:12px"><div class="row" style="justify-content:space-between"><h3 style="font-size:17px">${esc(d.name)}</h3><span class="hint">${d.cards.length} 张，记牢 ${lr}，今天该背 ${due}，没背过 ${nw}${best?`，速算最好 ${best.secs} 秒`:""}</span></div>
+      <div class="actions"><button class="btn primary small" data-act="recStart" data-deck="${d.id}" data-mode="flash">背诵</button><button class="btn small" data-act="recStart" data-deck="${d.id}" data-mode="write">默写</button>${d.speed?`<button class="btn small" data-act="recStart" data-deck="${d.id}" data-mode="speed">速算挑战</button>`:""}<button class="btn small" data-act="recList" data-deck="${d.id}">${S.recList===d.id?"收起":"看全部"}</button>${custom?`<button class="btn small" data-act="recEdit" data-deck="${d.id}">编辑</button><button class="btn small red" data-act="recDel" data-deck="${d.id}">删除</button>`:""}</div>
+      ${S.recList===d.id?`<div style="margin-top:8px">${d.cards.map(c=>`<div class="mini"><b>${esc(c.front)}</b><br>${esc(c.back)}</div>`).join("")}</div>`:""}</div>`;
+  }).join("");
+  const ed=S.recEdit;
+  return `<section class="section"><h2>背诵和默写</h2>
+    <p class="hint">${td?`今天有 ${td} 张卡到了复习时间。`:"今天没有到期的卡。"}背诵：看题想答案，翻开后给自己打分；默写：自己写出来再对照；速算挑战：限时做 20 道百化分。按记忆曲线安排复习，记牢的会越来越久才出现一次。</p>
+    ${decks}</section>
+  <section class="section"><h2>${ed&&ed.id?"编辑卡组":"新建卡组"}</h2><div class="panel cfg">
+    <p style="margin:0 0 4px">卡组名称</p><input type="text" id="recName" value="${esc(ed?ed.name:"")}" placeholder="比如：新闻学名词解释" style="width:100%">
+    <p style="margin:12px 0 4px">卡片：一行一张，写成“正面｜背面”（中间是竖线）</p>
+    <textarea id="recCards" placeholder="议程设置｜大众传媒通过报道的选择和强调，影响公众认为哪些议题重要">${esc(ed?ed.text:"")}</textarea>
+    <div class="row" style="margin-top:8px"><input type="text" id="recTopic" placeholder="或者让 DeepSeek 帮你出：输入主题，比如“传播学经典理论”" style="flex:1;min-width:14em"><button class="btn small" data-act="recGen" ${S.recGenBusy?"disabled":""}>${S.recGenBusy?"正在生成……":"帮我生成 15 张"}</button></div>
+    <div class="actions"><button class="btn primary" data-act="recSave">保存卡组</button>${ed?`<button class="btn" data-act="recCancel">取消</button>`:""}</div>
+    <p class="hint">DeepSeek 生成的内容先放进上面的框里，你看一遍、改一改，再点保存。</p>
+  </div></section>`;
+}
+function startRec(deckId,mode){
+  const d=deckById(deckId);if(!d)return;const dp=prog(deckId);
+  let q;
+  if(mode==="speed"){q=shuffle(d.cards.slice()).slice(0,20).map(c=>c.id);}
+  else{
+    const due=shuffle(d.cards.filter(c=>dp.cards[c.id]&&cardDue(dp,c)));
+    const nw=d.cards.filter(c=>!dp.cards[c.id]);
+    q=due.concat(nw).slice(0,20).map(c=>c.id);
+    if(!q.length){if(!confirm("这个卡组今天没有要背的了。要不要全部再过一遍？"))return;q=shuffle(d.cards.slice()).slice(0,20).map(c=>c.id);}
+  }
+  S.rec={deckId,mode,q,i:0,shown:false,input:"",judged:null,right:0,wrong:0,wrongs:[],start:Date.now()};render();focusRec();
+}
+function focusRec(){setTimeout(()=>{const el=$("#recIn");if(el)el.focus();},30);}
+function viewRecSession(){
+  const r=S.rec,d=deckById(r.deckId);
+  if(!d){S.rec=null;return viewRecite();}
+  if(r.i>=r.q.length){
+    const secs=Math.round((Date.now()-r.start)/1000);
+    let extra="";
+    if(r.mode==="speed"){const dp=prog(d.id);const acc=r.right/r.q.length;if(acc>=0.9&&(!dp.best||secs<dp.best.secs)){dp.best={secs,acc:Math.round(acc*100),at:Date.now()};saveProg(d.id);extra=`<p class="verdict ok">新纪录！</p>`;}}
+    return `<section class="section"><h2>这一组完成了</h2><div class="pcard"><div class="stats"><div class="stat"><div class="n">${r.right}</div><div class="l">${r.mode==="flash"?"记得":"对了"}</div></div><div class="stat red"><div class="n">${r.wrong}</div><div class="l">${r.mode==="flash"?"模糊或忘了":"错了"}</div></div><div class="stat"><div class="n">${secs}</div><div class="l">用时（秒）</div></div></div>${extra}
+      ${r.wrongs.length?`<h4 style="margin:14px 0 6px">要再看看的</h4>${r.wrongs.map(id=>{const c=d.cards.find(x=>x.id===id);return c?`<div class="mini"><b>${esc(c.front)}</b>　${esc(c.back)}</div>`:"";}).join("")}`:""}
+      <div class="actions"><button class="btn primary" data-act="recStart" data-deck="${d.id}" data-mode="${r.mode}">再来一组</button><button class="btn" data-act="recExit">回到卡组</button></div></div></section>`;
+  }
+  const c=d.cards.find(x=>x.id===r.q[r.i]);
+  if(!c){r.i++;return viewRecSession();}
+  const head=`<div class="pprog">${esc(d.name)}・${r.mode==="flash"?"背诵":r.mode==="write"?"默写":"速算挑战"}　第 ${r.i+1}／${r.q.length} 张${r.mode==="speed"?`<span class="ptimer" id="rtimer">0 秒</span>`:""}</div>`;
+  const front=`<div style="font-size:24px;font-weight:600;margin:6px 0 14px">${esc(c.front)}</div>`;
+  let body="";
+  if(r.mode==="flash"){
+    body=r.shown?`<div class="ans" style="font-size:19px">${esc(c.back)}</div><div class="actions"><button class="btn red" data-act="recGrade" data-v="0">忘了（1）</button><button class="btn" data-act="recGrade" data-v="1">模糊（2）</button><button class="btn primary" data-act="recGrade" data-v="2">记得（3）</button></div>`
+      :`<div class="actions"><button class="btn primary" data-act="recShow">看答案（空格）</button></div>`;
+  }else{
+    const numeric=c.num!=null;
+    if(r.judged==null){
+      body=`<input type="text" id="recIn" value="${esc(r.input)}" placeholder="${numeric?"写数字就行，比如 14.3":"把答案写出来"}" style="width:100%;font-size:18px" autocomplete="off" ${numeric?'inputmode="decimal"':""}><div class="actions"><button class="btn primary" data-act="recSubmit">提交（回车）</button>${r.mode==="write"?`<button class="btn" data-act="recGiveUp">不会，看答案</button>`:""}</div>`;
+    }else if(r.judged==="ask"){
+      body=`<div class="ans"><p><b>我写的：</b>${esc(r.input)||"（没写）"}</p><p><b>标准答案：</b>${esc(c.back)}</p></div><div class="actions"><button class="btn red" data-act="recSelf" data-v="0">没写对</button><button class="btn primary" data-act="recSelf" data-v="2">意思对了</button></div>`;
+    }else{
+      body=`<div class="verdict ${r.judged?"ok":"bad"}">${r.judged?"✓ 对了":"✗ 不对"}　标准答案：${esc(c.back)}</div>${r.judged?"":`<p class="hint">我写的：${esc(r.input)||"（没写）"}</p>`}<div class="actions"><button class="btn primary" data-act="recNext">下一张（回车）</button></div>`;
+    }
+  }
+  return `<section class="section">${head}<div class="pcard">${front}${body}<div class="actions"><button class="btn small" data-act="recExit">结束</button></div></div></section>`;
+}
+function recAdvance(ok,level){
+  const r=S.rec,c=r.q[r.i];
+  if(r.mode!=="speed")grade(r.deckId,c,level);
+  if(ok)r.right++;else{r.wrong++;r.wrongs.push(c);}
+  r.i++;r.shown=false;r.input="";r.judged=null;render();focusRec();
+}
+function recSubmit(){
+  const r=S.rec,d=deckById(r.deckId),c=d.cards.find(x=>x.id===r.q[r.i]);
+  const el=$("#recIn");r.input=el?el.value.trim():r.input;
+  if(c.num!=null){
+    const ok=numCheck(c,r.input);
+    if(r.mode==="speed"){toast(ok?"✓":"✗ "+c.back);recAdvance(ok,ok?2:0);return;}
+    r.judged=ok;r._level=ok?2:0;
+  }else{
+    r.judged=norm(r.input)&&norm(r.input)===norm(c.back)?true:"ask";r._level=2;
+  }
+  render();
+}
+function parseCards(text){
+  return text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map((l,i)=>{const k=l.search(/[｜|]/);return k>0?{id:"c"+Date.now().toString(36)+i,front:l.slice(0,k).trim(),back:l.slice(k+1).trim()}:null;}).filter(c=>c&&c.front&&c.back);
+}
+async function recGen(){
+  const topic=($("#recTopic").value||"").trim();if(!topic){toast("先写主题");return;}
+  const nameEl=$("#recName"),cardsEl=$("#recCards");
+  S.recEdit=Object.assign(S.recEdit||{},{name:nameEl.value||topic,text:cardsEl.value});
+  S.recGenBusy=true;render();
+  try{
+    const prompt=`你是${exam()}笔试的辅导老师。考生情况：${S.progress.about||"无"}
+请围绕“${topic}”出 15 张背诵卡，挑考试最常考、最需要背下来的内容。每张卡：正面是一个简短的问题或名词，背面是能直接背的答案，40 字以内，中文全角标点。内容必须准确，拿不准的不要写。
+只输出一个 JSON 对象，不要任何其他文字，格式：{"cards":[{"front":"","back":""}]}`;
+    const res=parseJSON(await askDeepSeek(prompt));
+    const lines=(Array.isArray(res.cards)?res.cards:[]).filter(c=>c&&c.front&&c.back).map(c=>String(c.front).replace(/[｜|]/g,"／")+"｜"+String(c.back).replace(/[｜|]/g,"／"));
+    if(!lines.length)throw Object.assign(new Error("e"),{ui:"没生成成功，再试一次"});
+    S.recEdit.text=(S.recEdit.text?S.recEdit.text.trim()+"\n":"")+lines.join("\n");
+    toast("生成好了，检查一下再保存");
+  }catch(e){console.error(e);toast(e.ui||"生成失败，再试一次");}
+  S.recGenBusy=false;render();
+}
+function recSave(){
+  const name=$("#recName").value.trim(),cards=parseCards($("#recCards").value);
+  if(!name){toast("给卡组起个名字");return;}
+  if(!cards.length){toast("至少写一张卡，格式是“正面｜背面”");return;}
+  const ed=S.recEdit;
+  if(ed&&ed.id){const d=S.decks.find(x=>x.id===ed.id);if(d){
+      const old=new Map(d.cards.map(c=>[c.front,c.id]));cards.forEach(c=>{if(old.has(c.front))c.id=old.get(c.front);});
+      d.name=name;d.cards=cards;DB.put(d).catch(saveFail);}}
+  else{const d={id:newId("deck"),kind:"deck",createdAt:Date.now(),name,cards};S.decks.push(d);DB.put(d).catch(saveFail);}
+  S.recEdit=null;render();toast("卡组已保存");
+}
+
 /* ---------- 收错题 ---------- */
-function recentHtml(){return S.mistakes.slice(0,5).map(cardHtml).join("")||`<div class="empty">还没有错题，拍一张试试。</div>`;}
+const WEEK="日一二三四五六";
+function lastId(){try{return localStorage.getItem("cap_last")||"";}catch(_){return "";}}
+function setLast(id){try{localStorage.setItem("cap_last",id);}catch(_){}}
+function dayGroups(){const g=new Map();S.mistakes.forEach(x=>{const k=dayKey(x.createdAt);if(!g.has(k))g.set(k,[]);g.get(k).push(x);});return g;}
+function dayLabel(k){const d=new Date(k+"T00:00:00");return k===dayKey(Date.now())?"今天":(d.getMonth()+1)+"月"+d.getDate()+"日";}
+function recentHtml(){
+  const g=dayGroups();if(!g.size)return `<div class="empty">还没有错题，拍一张试试。</div>`;
+  const keys=[...g.keys()];
+  if(!S.capOpenInit){S.capOpen=new Set([keys[0]]);const l=S.mistakes.find(x=>x.id===lastId());if(l)S.capOpen.add(dayKey(l.createdAt));S.capOpenInit=true;}
+  const L=S.mistakes.find(x=>x.id===lastId());
+  const nav=`<div class="datenav">${L?`<button class="chip" data-act="goLast" style="border-color:var(--amber)">↩ 上次做到这</button>`:""}${keys.map(k=>`<button class="chip" data-act="goDay" data-day="${k}">${dayLabel(k)}<span class="err" style="color:var(--muted)">${g.get(k).length}</span></button>`).join("")}</div>`;
+  return nav+keys.map(k=>{
+    const list=g.get(k),d=new Date(k+"T00:00:00"),open=S.capOpen.has(k);
+    const left=list.filter(x=>!x.mastered).length;
+    return `<details class="day" id="day-${k}" data-day="${k}" ${open?"open":""}><summary>${dayLabel(k)}（周${WEEK[d.getDay()]}）<span class="sub">${list.length} 道，没掌握 ${left}</span></summary><div class="daybody">${open?list.map(cardHtml).join(""):""}</div></details>`;
+  }).join("");
+}
+function scrollToEl(el){if(!el)return;const top=el.getBoundingClientRect().top+window.scrollY-150;window.scrollTo({top,behavior:"smooth"});}
+function goLast(){
+  const x=S.mistakes.find(m=>m.id===lastId());if(!x)return;
+  const k=dayKey(x.createdAt);
+  if(!S.capOpen.has(k)){S.capOpen.add(k);rerender();}
+  setTimeout(()=>scrollToEl(document.getElementById("card-"+x.id)),60);
+}
+document.addEventListener("toggle",e=>{
+  const d=e.target;if(!(d instanceof HTMLDetailsElement)||!d.classList.contains("day"))return;
+  const k=d.dataset.day;
+  if(d.open){if(!S.capOpen.has(k)){S.capOpen.add(k);d.querySelector(".daybody").innerHTML=(dayGroups().get(k)||[]).map(cardHtml).join("");hydrateImages();}}
+  else S.capOpen.delete(k);
+},true);
 function viewCapture(){
   const c=S.capture;
   return `<section class="section"><h2>收错题</h2>
@@ -715,7 +994,7 @@ function viewCapture(){
       <div class="row" style="margin-top:10px"><button class="btn primary" id="runCap" ${c.busy?"disabled":""}>${c.busy?"正在识别……":"识别并存入错题库"}</button></div>
       <div class="log" id="capLog">${esc(c.log)}</div>
     </div></section>
-    <section class="section"><h2>最近收录</h2><div id="recent">${recentHtml()}</div></section>`;
+    <section class="section"><h2>收录记录</h2><div id="recent">${recentHtml()}</div></section>`;
 }
 
 /* ---------- 错题卡 ---------- */
@@ -736,7 +1015,7 @@ function cardHtml(x){
   const stats=x.stats&&(x.stats.right||x.stats.wrong)?`做对 ${x.stats.right||0} 次，做错 ${x.stats.wrong||0} 次`:"";
   const modOpts=mods().concat([MISC]).map(m=>`<option value="${m.id}" ${m.id===x.module?"selected":""}>${esc(m.name)}</option>`).join("");
   const done=st&&st.done;
-  return `<article class="card ${x.mastered?"done":""}">
+  return `<article class="card ${x.mastered?"done":""} ${current()==="capture"&&x.id===lastId()?"last":""}" id="card-${x.id}">
     <div class="card-meta"><span class="tag">${esc(modName(x.module))}</span><span class="tag">${esc(x.topic||"")}</span><span>${fmtDate(x.createdAt)}</span>${statusLine(x)}${stats?`<span>${stats}</span>`:""}${x.fromId?`<span>来自同类题</span>`:""}</div>
     ${qBlock(qid,x)}
     ${done||open?`<div class="ans">
@@ -825,8 +1104,17 @@ function startPracticeWith(list,includeSim){
   S.practice={deck:shuffle(deck),i:0,right:0,wrong:0};
   if(current()!=="practice")location.hash="#practice";else render();
 }
+setInterval(()=>{const rt=$("#rtimer");if(rt&&S.rec)rt.textContent=Math.round((Date.now()-S.rec.start)/1000)+" 秒";},1000);
 setInterval(()=>{const el=$("#ptimer");if(!el||!S.practice)return;const st=S.ans[S.practice.deck[S.practice.i]];if(st&&st.start&&!st.done)el.textContent=Math.round((Date.now()-st.start)/1000)+" 秒";},1000);
 document.addEventListener("keydown",e=>{
+  if(current()==="recite"&&S.rec){
+    const r=S.rec;
+    if(e.target&&e.target.id==="recIn"){if(e.key==="Enter"){e.preventDefault();recSubmit();}return;}
+    if(e.target&&(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA"))return;
+    if(r.mode==="flash"){if(!r.shown&&(e.key===" "||e.key==="Enter")){e.preventDefault();r.shown=true;render();}else if(r.shown&&["1","2","3"].includes(e.key)){const v=Number(e.key)-1;recAdvance(v===2,v);}}
+    else if(r.judged===true||r.judged===false){if(e.key==="Enter"){e.preventDefault();recAdvance(!!r.judged,r.judged?r._level:0);}}
+    return;
+  }
   if(e.target&&e.target.id==="askIn"&&e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();sendAsk();return;}
   if(current()!=="practice"||!S.practice)return;
   const t=e.target;if(t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.tagName==="SELECT"))return;
@@ -910,6 +1198,22 @@ document.addEventListener("click",async ev=>{
   else if(a==="reveal"){const st=S.ans[qid]||(S.ans[qid]={picked:[]});st.revealed=true;rerender();}
   else if(a==="self"){judge(qid,b.dataset.ok==="1");}
   else if(a==="redo"){delete S.ans[qid];rerender();}
+  else if(a==="goLast"){goLast();}
+  else if(a==="recStart"){startRec(b.dataset.deck,b.dataset.mode);window.scrollTo(0,0);}
+  else if(a==="recExit"){S.rec=null;render();}
+  else if(a==="recShow"){S.rec.shown=true;render();}
+  else if(a==="recGrade"){const v=Number(b.dataset.v);recAdvance(v===2,v);}
+  else if(a==="recSubmit"){recSubmit();}
+  else if(a==="recGiveUp"){const r=S.rec;const el=$("#recIn");r.input=el?el.value:"";r.judged=false;r._level=0;render();}
+  else if(a==="recSelf"){const v=Number(b.dataset.v);recAdvance(v===2,v);}
+  else if(a==="recNext"){const r=S.rec;recAdvance(!!r.judged,r.judged?r._level:0);}
+  else if(a==="recList"){S.recList=S.recList===b.dataset.deck?"":b.dataset.deck;render();}
+  else if(a==="recEdit"){const d=S.decks.find(x=>x.id===b.dataset.deck);if(d){S.recEdit={id:d.id,name:d.name,text:d.cards.map(c=>c.front+"｜"+c.back).join("\n")};render();setTimeout(()=>{const el=$("#recName");if(el)el.scrollIntoView({block:"center"});},50);}}
+  else if(a==="recDel"){const d=S.decks.find(x=>x.id===b.dataset.deck);if(d&&confirm("删除卡组“"+d.name+"”？")){S.decks=S.decks.filter(x=>x.id!==d.id);DB.del(d.id).catch(saveFail);if(S.deckProg[d.id]){DB.del("dp::"+d.id).catch(()=>{});delete S.deckProg[d.id];}render();}}
+  else if(a==="recGen"){recGen();}
+  else if(a==="recSave"){recSave();}
+  else if(a==="recCancel"){S.recEdit=null;render();}
+  else if(a==="goDay"){const k=b.dataset.day;if(!S.capOpen.has(k)){S.capOpen.add(k);rerender();}setTimeout(()=>scrollToEl(document.getElementById("day-"+k)),60);}
   else if(a==="showImg"){S.showImg.has(id)?S.showImg.delete(id):S.showImg.add(id);rerender();}
   else if(a==="newChat"){newChat("","");}
   else if(a==="sendAsk"){sendAsk();}
@@ -946,7 +1250,7 @@ document.addEventListener("click",async ev=>{
   else if(a==="practiceBank"){startPracticeWith(filterList(S.bank),true);}
   else if(a==="startPractice"){const e=S.exp;startPracticeWith(filterList({mod:e.mod,range:e.range,state:e.scope,q:""}),e.sim);}
   else if(a==="endPractice"){S.practice=null;render();}
-  else if(a==="toggle"){S.bank.open.has(id)?S.bank.open.delete(id):S.bank.open.add(id);rerender();}
+  else if(a==="toggle"){if(current()==="capture")setLast(id);S.bank.open.has(id)?S.bank.open.delete(id):S.bank.open.add(id);rerender();}
   else if(a==="del"){
     if(!confirm("删除这道错题？删掉后找不回来。"))return;
     const x=S.mistakes.find(m=>m.id===id);S.mistakes=S.mistakes.filter(m=>m.id!==id);DB.del(id).catch(saveFail);
@@ -1000,6 +1304,7 @@ document.addEventListener("input",ev=>{
   if(ev.target.id==="fQ"){S.bank.q=ev.target.value;clearTimeout(qTimer);qTimer=setTimeout(()=>{const pos=ev.target.selectionStart;render();const el=$("#fQ");if(el){el.focus();el.setSelectionRange(pos,pos);}},350);}
   if(ev.target.id==="capNote"){S.capture.note=ev.target.value;}
   if(ev.target.id==="askIn"){S.askUi.input=ev.target.value;}
+  if(ev.target.id==="recName"||ev.target.id==="recCards"){S.recEdit=Object.assign(S.recEdit||{},{name:$("#recName").value,text:$("#recCards").value});}
 });
 
 /* ========== 收错题：选图、拖拽、粘贴 ========== */
@@ -1195,7 +1500,7 @@ async function backup(){
   const images={};
   for(const c of S.chats){for(const m of c.messages){if(m.imageId&&!images[m.imageId]){try{const b=await DB.getImg(m.imageId);if(b)images[m.imageId]=await blobToDataURL(b);}catch(_){}}}}
   for(const x of S.mistakes){for(const id of (x.imageIds||[])){if(!images[id]){try{const b=await DB.getImg(id);if(b)images[id]=await blobToDataURL(b);}catch(_){}}}}
-  const data={app:"beikao",version:2,exportedAt:Date.now(),progress:S.progress,items:S.mistakes.concat(S.notes,Object.values(S.topics),S.chats),images};
+  const data={app:"beikao",version:2,exportedAt:Date.now(),progress:S.progress,items:S.mistakes.concat(S.notes,Object.values(S.topics),S.chats,S.decks,Object.values(S.deckProg)),images};
   saveFile(`${exam()}备考工作台备份_${dayKey(Date.now())}.json`,JSON.stringify(data),"application/json");
 }
 async function restore(file){
@@ -1217,6 +1522,8 @@ async function load(fromSync){
   S.mistakes=all.filter(x=>x.kind==="mistake").sort((a,b)=>b.createdAt-a.createdAt);
   S.notes=all.filter(x=>x.kind==="note").sort((a,b)=>b.createdAt-a.createdAt);
   S.chats=all.filter(x=>x.kind==="chat").sort((a,b)=>b.createdAt-a.createdAt);
+  S.decks=all.filter(x=>x.kind==="deck").sort((a,b)=>a.createdAt-b.createdAt);
+  S.deckProg={};all.filter(x=>x.kind==="deckprog").forEach(x=>{S.deckProg[x.deck]=x;});
   S.topics={};all.filter(x=>x.kind==="topic").forEach(x=>{S.topics[x.key]=x;});
   const p=all.find(x=>x.id==="progress")||{};
   let modules=p.modules;
@@ -1225,13 +1532,23 @@ async function load(fromSync){
     const custom=p.custom||{};modules.forEach(m=>{(custom[m.id]||[]).forEach(t=>{if(!m.topics.includes(t))m.topics.push(t);});});
   }
   S.progress={status:p.status||{},modules,examName:p.examName||DEFAULT_EXAM,about:p.about!=null?p.about:DEFAULT_ABOUT,examDate:p.examDate||"",daily:p.daily||{}};
-  if(!p.modules)saveProgress();
+  if(!p.modules)saveProgress(!p.id);
   S.ready=true;
   if(fromSync&&document.activeElement&&["askIn","capNote","fQ"].includes(document.activeElement.id)){renderHeader();return;}
   render();
 }
 setTabs();render();
-DB.open().then(()=>load()).then(()=>{Sync.setStatus(Sync.status);if(Sync.on())Sync.run();}).catch(e=>{console.error(e);S.err="浏览器不允许本地存储（可能开了无痕模式），数据没法保存。请用普通窗口打开。";S.ready=true;render();});
+async function takeShared(){
+  if(!new URLSearchParams(location.search).has("shared")||!("caches" in window))return;
+  try{
+    const c=await caches.open("beikao-share-inbox");const keys=await c.keys();const files=[];
+    for(const k of keys){const r=await c.match(k);const b=await r.blob();files.push(new File([b],"分享_"+files.length+".jpg",{type:b.type||"image/jpeg"}));await c.delete(k);}
+    history.replaceState(null,"",location.pathname+"#capture");setTabs();render();
+    if(files.length)addFiles(files);
+  }catch(e){console.error(e);}
+}
+if("serviceWorker" in navigator&&location.protocol==="https:"){navigator.serviceWorker.register("sw.js").catch(e=>console.warn(e));}
+DB.open().then(()=>load()).then(()=>{takeShared();if(current()==="capture"&&lastId())setTimeout(goLast,200);Sync.setStatus(Sync.status);if(Sync.on())Sync.run();}).catch(e=>{console.error(e);S.err="浏览器不允许本地存储（可能开了无痕模式），数据没法保存。请用普通窗口打开。";S.ready=true;render();});
 })();
 </script>
 </body>
